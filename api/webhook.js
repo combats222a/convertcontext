@@ -2,7 +2,16 @@
 // Принимает уведомление от NOWPayments об оплате, проверяет подпись, сохраняет статус в KV
 
 import crypto from 'crypto';
-import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
+
+let redisClient;
+async function getRedis() {
+  if (!redisClient) {
+    redisClient = createClient({ url: process.env.REDIS_URL });
+    await redisClient.connect();
+  }
+  return redisClient;
+}
 
 function sortObject(obj) {
   // NOWPayments требует, чтобы поля были отсортированы по ключу перед проверкой подписи
@@ -42,7 +51,8 @@ export default async function handler(req, res) {
       ? now + 24 * 60 * 60 * 1000        // +1 день
       : now + 30 * 24 * 60 * 60 * 1000;  // +30 дней
 
-    await kv.set(`paid:${token}`, expiresAt);
+    const redis = await getRedis();
+    await redis.set(`paid:${token}`, expiresAt);
   }
 
   return res.status(200).json({ received: true });
