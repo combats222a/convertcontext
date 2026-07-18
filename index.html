@@ -3,177 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ConvertHub — HEIC в JPG и PNG за секунды</title>
-<meta name="description" content="Конвертируйте HEIC-фото с iPhone в JPG или PNG прямо в браузере. Без загрузки на сервер, без потери приватности.">
+<title>ConvertHub — HEIC в JPG и PNG</title>
+<meta name="description" content="Конвертируйте HEIC-фото с iPhone в JPG или PNG прямо в браузере.">
 <style>
   :root{
-    --bg: #17130f;
-    --bg-raised: #221c16;
-    --paper: #f2ece1;
-    --safelight: #d4572a;
-    --safelight-dim: #a8431f;
-    --film: #4a6b5a;
-    --line: #3a2f24;
-    --text-dim: #b8ab97;
+    --bg: #0e0f13;
+    --bg-panel: #16181f;
+    --bg-input: #1c1f28;
+    --border: #262a35;
+    --text: #e8e9ed;
+    --text-dim: #8b8f9c;
+    --accent: #4f7fff;
+    --accent-dim: #3a5fd0;
+    --ok: #3ecf8e;
+    --err: #f0554d;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
     background: var(--bg);
-    color: var(--paper);
-    font-family: 'Iowan Old Style', 'Georgia', serif;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     min-height:100vh;
-    -webkit-font-smoothing:antialiased;
-  }
-  .grain{
-    position:fixed; inset:0; pointer-events:none; opacity:0.05; z-index:1;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   header{
     display:flex; justify-content:space-between; align-items:center;
-    padding: 28px 6vw; border-bottom:1px solid var(--line);
-    font-family: 'Courier New', monospace; font-size:13px; letter-spacing:0.12em;
-    text-transform:uppercase; color:var(--text-dim);
+    padding: 18px 6vw; border-bottom:1px solid var(--border);
   }
-  header .brand{ color: var(--paper); font-weight:bold; letter-spacing:0.05em;}
-  header .brand span{ color: var(--safelight); }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; }
+  .brand .logo{
+    width:28px; height:28px; border-radius:7px;
+    background: linear-gradient(135deg, var(--accent), #7aa0ff);
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
   #counterBadge{
-    font-family:'Courier New', monospace; font-size:12px; letter-spacing:0.08em;
-    padding:5px 12px; border:1px solid var(--line); border-radius:20px; color:var(--text-dim);
-    white-space:nowrap;
+    font-size:13px; padding:6px 14px; border:1px solid var(--border);
+    border-radius:20px; color: var(--text-dim); background: var(--bg-panel);
   }
-  #counterBadge.unlimited{ border-color: var(--film); color: var(--film); }
-  #counterBadge b{ color: var(--paper); }
+  #counterBadge b{ color: var(--text); }
+  #counterBadge.unlimited{ border-color: var(--ok); color: var(--ok); }
 
-  main{ max-width: 880px; margin: 0 auto; padding: 8vh 6vw 10vh; position:relative; z-index:2;}
+  main{ max-width: 640px; margin: 0 auto; padding: 8vh 6vw 10vh; text-align:center; }
 
-  .frame-number{
-    font-family:'Courier New', monospace; font-size:12px; color:var(--safelight);
-    letter-spacing:0.15em; margin-bottom:18px;
-  }
-
-  h1{
-    font-size: clamp(2.4rem, 6vw, 4.2rem);
-    line-height:1.05; font-weight:400; max-width:14ch;
-    margin-bottom: 22px;
-  }
-  h1 em{ font-style:italic; color: var(--safelight); }
-
-  .sub{
-    font-family:'Helvetica Neue', Arial, sans-serif; font-size:17px;
-    color: var(--text-dim); max-width:52ch; line-height:1.6; margin-bottom: 56px;
-  }
-
-  .dropzone{
-    border:1px dashed var(--line);
-    border-radius:2px;
-    padding: 60px 30px;
-    text-align:center;
-    position:relative;
-    transition: border-color 0.25s ease, background 0.25s ease;
-    background: var(--bg-raised);
-  }
-  .dropzone.drag{
-    border-color: var(--safelight);
-    background: #2a2018;
-  }
-  .dropzone.locked{ opacity:0.4; pointer-events:none; }
-  .dropzone input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
-  .dz-label{
-    font-family:'Helvetica Neue', Arial, sans-serif;
-    font-size:15px; color: var(--text-dim);
-  }
-  .dz-label strong{ color: var(--paper); font-weight:600; }
-  .dz-hint{ font-family:'Courier New', monospace; font-size:11px; color: var(--safelight-dim); margin-top:10px; letter-spacing:0.08em;}
+  h1{ font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight:700; margin-bottom:12px; }
+  .sub{ color: var(--text-dim); font-size:15px; margin-bottom:40px; line-height:1.5; }
 
   .format-toggle{
-    display:flex; gap:10px; justify-content:center; margin: 28px 0 0;
-    font-family:'Courier New', monospace; font-size:12px; letter-spacing:0.1em;
+    display:inline-flex; gap:4px; margin-bottom:28px;
+    background: var(--bg-panel); padding:4px; border-radius:10px; border:1px solid var(--border);
   }
   .format-toggle button{
-    background:none; border:1px solid var(--line); color:var(--text-dim);
-    padding: 8px 18px; cursor:pointer; border-radius:2px; text-transform:uppercase;
+    background:none; border:none; color:var(--text-dim);
+    padding: 8px 20px; cursor:pointer; border-radius:7px; font-size:14px; font-weight:500;
   }
-  .format-toggle button.active{
-    border-color: var(--safelight); color: var(--paper); background: rgba(212,87,42,0.12);
+  .format-toggle button.active{ background: var(--accent); color:#fff; }
+
+  .dropzone{
+    border:2px dashed var(--border);
+    border-radius:14px;
+    padding: 54px 30px;
+    text-align:center;
+    position:relative;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    background: var(--bg-panel);
   }
+  .dropzone.drag{ border-color: var(--accent); background: #191c26; }
+  .dropzone.locked{ opacity:0.35; pointer-events:none; }
+  .dropzone input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+  .upload-btn{
+    display:inline-block; background: var(--accent); color:#fff; border:none;
+    padding: 13px 30px; border-radius:9px; font-size:15px; font-weight:600;
+    margin-bottom:14px; pointer-events:none;
+  }
+  .dz-hint{ font-size:13px; color: var(--text-dim); }
 
   .contact-sheet{
-    margin-top: 48px;
-    display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
-    gap:14px;
+    margin-top: 28px;
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr));
+    gap:12px; text-align:left;
   }
   .frame{
-    background: var(--bg-raised);
-    border:1px solid var(--line);
+    background: var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:10px;
     padding: 10px;
-    font-family:'Courier New', monospace;
-    font-size:11px;
+    font-size:12px;
     color: var(--text-dim);
-    position:relative;
   }
-  .frame img{ width:100%; display:block; margin-bottom:8px; filter:sepia(0.15); }
-  .frame .status{ color: var(--film); }
-  .frame .status.working{ color: var(--safelight); }
-  .frame a{ color: var(--paper); text-decoration:underline; text-decoration-color: var(--safelight); }
+  .frame img{ width:100%; display:block; margin-bottom:8px; border-radius:6px; }
+  .frame .status{ color: var(--ok); font-weight:600; }
+  .frame .status.working{ color: var(--accent); }
+  .frame a{ color: var(--text); text-decoration:underline; text-decoration-color: var(--accent); }
 
-  /* Пейволл */
   .paywall{
     display:none;
-    margin-top: 40px;
-    border: 1px solid var(--safelight-dim);
-    background: linear-gradient(180deg, rgba(212,87,42,0.08), transparent);
-    padding: 36px 30px;
-    border-radius:2px;
+    margin-top: 28px;
+    border: 1px solid var(--accent-dim);
+    background: var(--bg-panel);
+    padding: 30px 26px;
+    border-radius:14px;
+    text-align:left;
   }
   .paywall.show{ display:block; }
-  .paywall .pw-title{
-    font-size: 1.4rem; margin-bottom:8px;
-  }
-  .paywall .pw-sub{
-    font-family:'Helvetica Neue', Arial, sans-serif; font-size:14px; color:var(--text-dim);
-    margin-bottom: 26px; line-height:1.5;
-  }
-  .plans{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-  @media (max-width:520px){ .plans{ grid-template-columns:1fr; } }
+  .paywall .pw-title{ font-size: 1.2rem; font-weight:700; margin-bottom:6px; }
+  .paywall .pw-sub{ font-size:14px; color:var(--text-dim); margin-bottom: 22px; }
+  .plans{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+  @media (max-width:480px){ .plans{ grid-template-columns:1fr; } }
   .plan{
-    border:1px solid var(--line); background: var(--bg-raised);
-    padding: 22px 20px; border-radius:2px; text-align:left; cursor:pointer;
+    border:1px solid var(--border); background: var(--bg-input);
+    padding: 20px 18px; border-radius:12px; text-align:left; cursor:pointer;
     transition: border-color 0.2s ease;
-    font-family:'Helvetica Neue', Arial, sans-serif;
   }
-  .plan:hover{ border-color: var(--safelight); }
-  .plan .plan-name{
-    font-family:'Courier New', monospace; font-size:11px; letter-spacing:0.1em;
-    color: var(--safelight); text-transform:uppercase; margin-bottom:10px;
-  }
-  .plan .plan-price{ font-size:1.8rem; font-family: 'Iowan Old Style', Georgia, serif; margin-bottom:6px; }
-  .plan .plan-price span{ font-size:0.9rem; color:var(--text-dim); }
+  .plan:hover{ border-color: var(--accent); }
+  .plan.recommended{ border-color: var(--accent); }
+  .plan .plan-name{ font-size:12px; color: var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.03em; }
+  .plan .plan-price{ font-size:1.6rem; font-weight:700; margin-bottom:4px; }
+  .plan .plan-price span{ font-size:0.85rem; color:var(--text-dim); font-weight:400; }
   .plan .plan-desc{ font-size:13px; color:var(--text-dim); }
-  .plan.recommended{ border-color: var(--safelight); }
-
-  .pw-status{
-    margin-top:18px; font-family:'Courier New', monospace; font-size:12px; color:var(--text-dim);
-  }
+  .pw-status{ margin-top:16px; font-size:13px; color:var(--text-dim); }
 
   footer{
-    border-top:1px solid var(--line);
-    padding: 24px 6vw; text-align:center;
-    font-family:'Courier New', monospace; font-size:11px; color: var(--text-dim);
-    letter-spacing:0.08em;
+    border-top:1px solid var(--border);
+    padding: 22px 6vw; text-align:center;
+    font-size:12px; color: var(--text-dim);
   }
 </style>
 </head>
 <body>
-<div class="grain"></div>
 <header>
-  <div class="brand">Convert<span>Hub</span></div>
+  <div class="brand"><span class="logo">🗂</span> ConvertHub</div>
   <div id="counterBadge">…</div>
 </header>
 
 <main>
-  <div class="frame-number">РУЛОН 01 / КАДР HEIC→RGB</div>
-  <h1>Ваш iPhone снял <em>HEIC</em>. Здесь он проявится в JPG.</h1>
-  <p class="sub">Перетащите фото — конвертация происходит прямо в этой вкладке браузера. Файлы никуда не отправляются: ни на сервер, ни в облако.</p>
+  <h1>HEIC → JPG / PNG за секунды</h1>
+  <p class="sub">Конвертация происходит прямо в браузере. Файлы никуда не загружаются.</p>
 
   <div class="format-toggle">
     <button data-fmt="jpeg" class="active">в JPG</button>
@@ -182,13 +146,13 @@
 
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".heic,.heif" multiple>
-    <div class="dz-label"><strong>Перетащите HEIC-файлы</strong> сюда, или нажмите, чтобы выбрать</div>
-    <div class="dz-hint" id="dzHint">ДО 20 ФАЙЛОВ ЗА РАЗ · ОБРАБОТКА ЛОКАЛЬНО</div>
+    <div class="upload-btn">Выбрать изображения</div>
+    <div class="dz-hint" id="dzHint">или перетащите файлы сюда · до 20 за раз</div>
   </div>
 
   <div class="paywall" id="paywall">
     <div class="pw-title">Лимит на сегодня закончился</div>
-    <div class="pw-sub">Бесплатно доступно 5 кадров в день. Проявите ещё — выберите вариант ниже.</div>
+    <div class="pw-sub">Бесплатно доступно 5 файлов в день. Продолжить можно так:</div>
     <div class="plans">
       <div class="plan" data-plan="day">
         <div class="plan-name">На сегодня</div>
@@ -207,13 +171,12 @@
   <div class="contact-sheet" id="sheet"></div>
 </main>
 
-<footer>ConvertHub — конвертация без сервера, без слежки, без очереди</footer>
+<footer>ConvertHub — без сервера, без слежки, без очереди</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
 <script>
   const FREE_LIMIT = 5;
 
-  // --- Токен пользователя ---
   function getToken(){
     let token = localStorage.getItem('ch_token');
     if(!token){
@@ -224,24 +187,15 @@
   }
   const token = getToken();
 
-  // --- Счётчик бесплатных конвертаций за сегодня ---
   function todayKey(){
     const d = new Date();
     return `ch_count_${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   }
-  function getTodayCount(){
-    return parseInt(localStorage.getItem(todayKey()) || '0', 10);
-  }
-  function incTodayCount(){
-    localStorage.setItem(todayKey(), String(getTodayCount()+1));
-  }
+  function getTodayCount(){ return parseInt(localStorage.getItem(todayKey()) || '0', 10); }
+  function incTodayCount(){ localStorage.setItem(todayKey(), String(getTodayCount()+1)); }
 
-  // --- Статус оплаты (кэш в localStorage, проверяется через /api/check-status) ---
   let paidUntil = parseInt(localStorage.getItem('ch_paid_until') || '0', 10);
-
-  function isPaidNow(){
-    return paidUntil && paidUntil > Date.now();
-  }
+  function isPaidNow(){ return paidUntil && paidUntil > Date.now(); }
 
   async function refreshPaidStatus(){
     try{
@@ -266,7 +220,7 @@
       badge.classList.add('unlimited');
       dropzone.classList.remove('locked');
       paywall.classList.remove('show');
-      dzHint.textContent = 'ДО 20 ФАЙЛОВ ЗА РАЗ · БЕЗЛИМИТ АКТИВЕН';
+      dzHint.textContent = 'или перетащите файлы сюда · безлимит активен';
       return;
     }
 
@@ -284,20 +238,16 @@
     }
   }
 
-  // При загрузке — если вернулись после оплаты (?paid=1), проверяем статус
   if(new URLSearchParams(location.search).get('paid') === '1'){
     document.getElementById('pwStatus').textContent = 'Проверяем оплату…';
     refreshPaidStatus();
-    // чистим URL, чтобы не проверять повторно при обновлении страницы
     history.replaceState({}, '', location.pathname);
   } else {
     updateUI();
   }
 
-  // На всякий случай — периодическая проверка, если пользователь оплатил в соседней вкладке
   setInterval(()=>{ if(!isPaidNow()) refreshPaidStatus(); }, 15000);
 
-  // --- Клик по тарифу — создаём инвойс ---
   document.querySelectorAll('.plan').forEach(planEl=>{
     planEl.addEventListener('click', async ()=>{
       const plan = planEl.dataset.plan;
@@ -322,7 +272,6 @@
     });
   });
 
-  // --- Формат конвертации ---
   let targetFormat = 'jpeg';
   document.querySelectorAll('.format-toggle button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -332,7 +281,6 @@
     });
   });
 
-  // --- Дропзона ---
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const sheet = document.getElementById('sheet');
@@ -347,13 +295,10 @@
     if(dropzone.classList.contains('locked')) return;
     handleFiles(e.dataTransfer.files);
   });
-  fileInput.addEventListener('change', e=>{
-    handleFiles(e.target.files);
-  });
+  fileInput.addEventListener('change', e=>{ handleFiles(e.target.files); });
 
   function handleFiles(fileList){
     Array.from(fileList).forEach(file=>{
-      // Проверяем лимит перед каждым файлом (на случай батч-загрузки на грани лимита)
       if(!isPaidNow() && getTodayCount() >= FREE_LIMIT){
         updateUI();
         return;
@@ -362,7 +307,7 @@
       const frame = document.createElement('div');
       frame.className='frame';
       const idx = String(sheet.children.length+1).padStart(3,'0');
-      frame.innerHTML = `<div class="status working">КАДР ${idx} — проявляется…</div>`;
+      frame.innerHTML = `<div class="status working">Файл ${idx} — обработка…</div>`;
       sheet.appendChild(frame);
 
       heic2any({ blob: file, toType: `image/${targetFormat}`, quality: 0.9 })
@@ -373,14 +318,14 @@
           const outName = file.name.replace(/\.(heic|heif)$/i, '') + '.' + ext;
           frame.innerHTML = `
             <img src="${url}" alt="${outName}">
-            <div class="status">ГОТОВО</div>
+            <div class="status">Готово</div>
             <a href="${url}" download="${outName}">скачать ${outName}</a>
           `;
           if(!isPaidNow()) incTodayCount();
           updateUI();
         })
         .catch(err=>{
-          frame.innerHTML = `<div class="status" style="color:#c93b3b">ОШИБКА: не HEIC или повреждён</div>`;
+          frame.innerHTML = `<div class="status" style="color:#f0554d">Ошибка: не HEIC или повреждён</div>`;
           console.error(err);
         });
     });
