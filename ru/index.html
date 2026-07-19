@@ -308,7 +308,7 @@
   <div class="convert-widget" id="dropzone">
     <input type="file" id="fileInput" multiple style="display:none">
 
-    <div class="cw-stats" id="cwStats">
+    <div class="cw-stats hidden" id="cwStats">
       <button type="button" class="cw-stats-close" id="cwStatsClose" aria-label="Скрыть">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
@@ -467,23 +467,23 @@
   let selectedTargetCode = null;
 
   const IMAGE_FORMATS = [
-    {code:'JPG', enabled:true}, {code:'PNG', enabled:true}, {code:'JPEG', enabled:false},
-    {code:'WEBP', enabled:false}, {code:'SVG', enabled:false}, {code:'TIFF', enabled:false},
-    {code:'GIF', enabled:false}, {code:'BMP', enabled:false}, {code:'PSD', enabled:false},
-    {code:'HDR', enabled:false}, {code:'JBG', enabled:false}, {code:'JPE', enabled:false},
-    {code:'ICO', enabled:false}, {code:'PDB', enabled:false}, {code:'AVIF', enabled:false},
-    {code:'JFIF', enabled:false}, {code:'RGB', enabled:false}, {code:'JPS', enabled:false},
-    {code:'CUR', enabled:false}, {code:'EXR', enabled:false}, {code:'JIF', enabled:false},
-    {code:'HRZ', enabled:false}, {code:'WBMP', enabled:false}, {code:'MAP', enabled:false},
-    {code:'PPM', enabled:false}, {code:'IPL', enabled:false}, {code:'PGM', enabled:false},
-    {code:'JP2', enabled:false}, {code:'TGA', enabled:false}, {code:'DDS', enabled:false},
-    {code:'PCX', enabled:false}, {code:'PBM', enabled:false}, {code:'FAX', enabled:false},
+    {code:'JPG', enabled:true}, {code:'PNG', enabled:true}, {code:'JPEG', enabled:true},
+    {code:'WEBP', enabled:true}, {code:'SVG', enabled:false}, {code:'TIFF', enabled:true},
+    {code:'GIF', enabled:true}, {code:'BMP', enabled:true}, {code:'PSD', enabled:true},
+    {code:'HDR', enabled:true}, {code:'JBG', enabled:false}, {code:'JPE', enabled:true},
+    {code:'ICO', enabled:true}, {code:'PDB', enabled:false}, {code:'AVIF', enabled:false},
+    {code:'JFIF', enabled:true}, {code:'RGB', enabled:true}, {code:'JPS', enabled:true},
+    {code:'CUR', enabled:true}, {code:'EXR', enabled:false}, {code:'JIF', enabled:true},
+    {code:'HRZ', enabled:false}, {code:'WBMP', enabled:true}, {code:'MAP', enabled:false},
+    {code:'PPM', enabled:true}, {code:'IPL', enabled:false}, {code:'PGM', enabled:true},
+    {code:'JP2', enabled:false}, {code:'TGA', enabled:true}, {code:'DDS', enabled:false},
+    {code:'PCX', enabled:false}, {code:'PBM', enabled:true}, {code:'FAX', enabled:false},
     {code:'FTS', enabled:false}, {code:'G3', enabled:false}, {code:'MNG', enabled:false},
     {code:'MTV', enabled:false}, {code:'OTB', enabled:false}, {code:'PAL', enabled:false},
     {code:'PALM', enabled:false}, {code:'PAM', enabled:false}, {code:'PCD', enabled:false},
     {code:'PCT', enabled:false}, {code:'PFM', enabled:false}, {code:'PICON', enabled:false},
     {code:'PICT', enabled:false}, {code:'PNM', enabled:false}, {code:'RAS', enabled:false},
-    {code:'RGBA', enabled:false}, {code:'RGBO', enabled:false}, {code:'SGI', enabled:false},
+    {code:'RGBA', enabled:false}, {code:'RGBO', enabled:false}, {code:'SGI', enabled:true},
     {code:'SUN', enabled:false}, {code:'UYVY', enabled:false}, {code:'VIFF', enabled:false},
     {code:'XBM', enabled:false}, {code:'XPM', enabled:false}, {code:'XV', enabled:false},
     {code:'XWD', enabled:false}, {code:'YUV', enabled:false}, {code:'JBIG', enabled:false},
