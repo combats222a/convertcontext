@@ -103,11 +103,14 @@
 
   /* ===== Контент ===== */
   main{
-    max-width: 900px; margin: 0; padding: 56px 40px 96px;
-    margin-left: var(--rail-w);
+    margin: 0;
+    margin-left: calc(var(--rail-w) + var(--sidebar-w));
+    padding: 56px max(40px, calc((100% - 900px) / 2)) 96px;
     padding-top: calc(var(--header-h) + 56px);
     text-align:left;
+    transition: margin-left 0.2s ease;
   }
+  body.sidebar-collapsed main{ margin-left: calc(var(--rail-w) + var(--sidebar-w-collapsed)); }
 
   h1{ font-size: clamp(1.7rem, 3.2vw, 2.15rem); font-weight:700; margin-bottom:10px; letter-spacing:-0.01em; }
   .sub{ color: var(--text-dim); font-size:14.5px; margin-bottom:34px; line-height:1.55; max-width:560px; }
@@ -360,9 +363,11 @@
 
   footer{
     border-top:1px solid var(--border);
-    padding: 22px 40px 22px calc(var(--rail-w) + 40px); text-align:left;
+    padding: 22px 40px 22px calc(var(--rail-w) + var(--sidebar-w) + 40px); text-align:left;
     font-size:12px; color: var(--text-dim);
+    transition: padding-left 0.2s ease;
   }
+  body.sidebar-collapsed footer{ padding-left: calc(var(--rail-w) + var(--sidebar-w-collapsed) + 40px); }
 
   /* ===== Боковой сайдбар (персистентный, сворачиваемый) ===== */
   .sidebar-overlay{
@@ -399,7 +404,6 @@
     width: var(--sidebar-w);
     background: var(--bg-panel);
     border-right:1px solid var(--border);
-    box-shadow: 8px 0 28px rgba(0,0,0,0.45);
     transition: width 0.2s ease, padding 0.2s ease;
     z-index:200;
     overflow-y:auto; overflow-x:hidden;
