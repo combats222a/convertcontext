@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEIC — конвертируйте в любой формат — ConvertHub</title>
+<meta name="description" content="Конвертируйте HEIC-фото с iPhone в JPG, PNG и другие форматы. Выберите нужный формат — конвертация происходит прямо в браузере.">
+<style>
+  :root{
+    --bg: #0b0e18;
+    --bg-panel: #0b0e18;
+    --bg-elevated: #151c31;
+    --bg-input: #191d2a;
+    --border: #262a3d;
+    --border-soft: rgba(255,255,255,0.06);
+    --text: #e8e9ed;
+    --text-dim: #8b8f9c;
+    --accent: #1f56dc;
+    --accent-dim: #2c5bce;
+    --accent-icon: #2c5bce;
+    --border-grad-1: #2c5bce;
+    --border-grad-2: #4b4391;
+    --accent-glow: rgba(31,86,220,0.28);
+    --ok: #3ecf8e;
+    --err: #f0554d;
+    --header-h: 60px;
+    --rail-w: 56px;
+    --sidebar-w: 248px;
+    --sidebar-w-collapsed: 0px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    min-height:100vh;
+  }
+  header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 18px 6vw; border-bottom:1px solid var(--border);
+    gap:14px;
+  }
+  .header-left{ display:flex; align-items:center; gap:14px; }
+
+  /* Кнопка-гамбургер — открывает/закрывает боковой сайдбар */
+  .menu-trigger-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:38px; height:38px; flex-shrink:0;
+    background: var(--bg-panel); border:1px solid var(--border); border-radius:9px;
+    color: var(--text); cursor:pointer; padding:0;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .menu-trigger-btn:hover{ background: var(--bg-input); }
+  .menu-trigger-btn.active{ border-color: var(--accent); color: var(--accent); background: rgba(31,86,220,0.1); }
+  .menu-trigger-btn svg{ width:18px; height:18px; }
+
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; text-decoration:none; color: var(--text); }
+  .brand:visited{ color: var(--text); }
+  .brand .logo{
+    width:28px; height:28px; border-radius:7px;
+    background: linear-gradient(135deg, var(--accent), #2c5bce);
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
+  #counterBadge{
+    font-size:13px; padding:6px 14px; border:1px solid var(--border);
+    border-radius:20px; color: var(--text-dim); background: var(--bg-panel);
+  }
+  #counterBadge b{ color: var(--text); }
+  #counterBadge.unlimited{ border-color: var(--ok); color: var(--ok); }
+
+  main{ max-width: 760px; margin: 0 auto; padding: 8vh 6vw 10vh; text-align:center; }
+
+  h1{ font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight:700; margin-bottom:12px; }
+  .sub{ color: var(--text-dim); font-size:15px; margin-bottom:40px; line-height:1.5; }
+
+  /* ===== Виджет конвертации (шахматный фон + выбор форматов) ===== */
+  .convert-widget{
+    position:relative;
+    border-radius:16px;
+    padding: 26px 24px 20px;
+    text-align:center;
+    background-color: #1a1c24;
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(31,86,220,0.14), transparent 55%),
+      radial-gradient(circle at 100% 100%, rgba(122,160,255,0.10), transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat, repeat;
+    border:1px solid var(--border);
+    transition: border-color 0.2s ease, opacity 0.2s ease;
+  }
+  .convert-widget.drag{ border-color: var(--accent); }
+  .convert-widget.locked{ opacity:0.4; pointer-events:none; }
+
+  .cw-stats{
+    position:relative;
+    margin: -26px -24px 22px;
+    padding: 16px 46px 16px 20px;
+    border-radius: 15px 15px 0 0;
+    background: rgba(255,255,255,0.035);
+    border-bottom: 1px solid var(--border);
+    text-align:center;
+    font-size:14px;
+    color: var(--text-dim);
+    line-height:1.5;
+  }
+  .cw-stats b{ color: var(--text); font-variant-numeric: tabular-nums; }
+  .cw-stats.hidden{ display:none; }
+  .cw-stats-close{
+    position:absolute; top:10px; right:12px;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    background:none; border:none; border-radius:7px;
+    color: var(--text-dim); cursor:pointer; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cw-stats-close:hover{ background: rgba(255,255,255,0.08); color: var(--text); }
+  .cw-stats-close svg{ width:16px; height:16px; }
+
+  .cw-top{ display:flex; align-items:center; justify-content:center; gap:16px; row-gap:14px; flex-wrap:wrap; }
+  .cw-choose{ display:flex; align-items:center; justify-content:center; gap:8px; flex-basis:100%; }
+  .cw-choose-btn{
+    display:inline-flex; align-items:center; gap:10px;
+    background: var(--accent); color:#fff; border:none;
+    padding: 13px 22px; border-radius:9px; font-size:15px; font-weight:600;
+    cursor:pointer; transition: background 0.15s ease;
+  }
+  .cw-choose-btn:hover{ background: var(--accent-dim); }
+  .cw-choose-icon{ width:18px; height:18px; flex-shrink:0; }
+  .cw-cloud-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:40px; height:40px; border-radius:9px; flex-shrink:0;
+    background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim); cursor:not-allowed; transition: color 0.15s ease;
+  }
+  .cw-cloud-btn svg{ width:18px; height:18px; }
+  .cw-cloud-btn:hover{ color: var(--text); }
+
+  .cw-formats{ display:flex; align-items:center; justify-content:center; gap:10px; flex-basis:100%; }
+  .cw-arrow{ color: var(--text-dim); font-size:14px; }
+
+  .fmt-picker{ position:relative; }
+  .fmt-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    border:none; border-radius:9px; padding:12px 16px;
+    font-size:16px; font-weight:700; cursor:pointer;
+  }
+  .fmt-btn svg{ width:16px; height:16px; transition: transform 0.15s ease; flex-shrink:0; }
+  .fmt-btn.open svg{ transform: rotate(180deg); }
+  .fmt-btn.dark{ background:#0b0e18; color:#fff; border:1px solid var(--border); }
+  .fmt-btn.light{ background:#fff; color:#111; }
+
+  .fmt-dropdown{
+    display:none; position:absolute; top: calc(100% + 8px); left:0;
+    background: #17181d; border:1px solid var(--border); border-radius:12px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.5);
+    z-index:60; padding:14px;
+  }
+  .fmt-dropdown.open{ display:block; }
+
+  .fmt-dropdown-source{ min-width:150px; display:none; }
+  .fmt-dropdown-source.open{ display:flex; flex-direction:column; gap:2px; }
+  .fmt-dropdown-source .fmt-chip{
+    background:none; border:none; color:var(--text); text-align:left;
+    padding:9px 10px; border-radius:7px; cursor:pointer; font-size:14px; font-weight:500;
+  }
+  .fmt-dropdown-source .fmt-chip:hover{ background: var(--bg-input); }
+
+  .fmt-dropdown-target{ width:420px; max-width:86vw; right:0; left:auto; }
+
+  .fmt-search{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+    margin-bottom:12px;
+  }
+  .fmt-search svg{ width:16px; height:16px; color: var(--text-dim); flex-shrink:0; }
+  .fmt-search input{
+    background:none; border:none; outline:none; color:var(--text); font-size:14px; width:100%;
+  }
+
+  .fmt-body{ display:flex; gap:14px; }
+  .fmt-categories{
+    display:flex; flex-direction:column; gap:2px; min-width:150px;
+    border-right:1px solid var(--border); padding-right:12px;
+    max-height:280px; overflow-y:auto;
+  }
+  .fmt-cat{
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background:none; border:none; color: var(--text-dim); text-align:left;
+    padding:8px 8px; border-radius:7px; font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .fmt-cat svg{ width:14px; height:14px; flex-shrink:0; opacity:0; }
+  .fmt-cat:hover{ background: var(--bg-input); }
+  .fmt-cat.active{ color:#fff; background: rgba(255,255,255,0.05); }
+  .fmt-cat.active svg{ opacity:1; }
+
+  .fmt-grid{
+    flex:1; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;
+    max-height:280px; overflow-y:auto; padding-right:4px; align-content:start;
+  }
+  .fmt-chip{
+    background: var(--bg-input); border:1px solid var(--border); color: var(--text);
+    padding:9px 4px; border-radius:7px; font-size:12px; font-weight:600;
+    cursor:pointer; text-align:center; transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .fmt-chip:hover{ border-color: var(--accent); }
+  .fmt-chip.active{ background: var(--accent); border-color: var(--accent); color:#fff; }
+  .fmt-chip.disabled{ opacity:0.4; cursor:not-allowed; }
+  .fmt-chip.disabled:hover{ border-color: var(--border); }
+  .fmt-empty{ grid-column: 1 / -1; color: var(--text-dim); font-size:13px; padding:20px 0; text-align:center; }
+
+  .cw-hint{ font-size:13px; color: var(--text-dim); margin-top:18px; }
+  .cw-hint a{ color: var(--accent); text-decoration:underline; }
+  .cw-hint a:hover{ color: var(--accent-dim); }
+
+  .cw-toast{
+    position:fixed; left:50%; bottom:24px; transform: translate(-50%, 12px);
+    background:#191d2a; border:1px solid var(--border); color:var(--text);
+    padding:10px 18px; border-radius:9px; font-size:13px;
+    opacity:0; pointer-events:none; transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index:500; box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  }
+  .cw-toast.show{ opacity:1; transform: translate(-50%, 0); }
+
+  @media (max-width:480px){
+    .fmt-dropdown-target{ width:92vw; left:0; right:auto; }
+    .fmt-body{ flex-direction:column; }
+    .fmt-categories{
+      flex-direction:row; overflow-x:auto; border-right:none;
+      border-bottom:1px solid var(--border); padding-right:0; padding-bottom:8px;
+      min-width:0; max-height:none;
+    }
+    .fmt-grid{ max-height:220px; }
+  }
+
+  .contact-sheet{
+    margin-top: 28px;
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr));
+    gap:12px; text-align:left;
+  }
+  .frame{
+    background: var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding: 10px;
+    font-size:12px;
+    color: var(--text-dim);
+  }
+  .frame img{ width:100%; display:block; margin-bottom:8px; border-radius:6px; }
+  .frame .status{ color: var(--ok); font-weight:600; }
+  .frame .status.working{ color: var(--accent); }
+  .frame a{ color: var(--text); text-decoration:underline; text-decoration-color: var(--accent); }
+
+  .paywall{
+    display:none;
+    margin-top: 28px;
+    border: 1px solid var(--accent-dim);
+    background: var(--bg-panel);
+    padding: 30px 26px;
+    border-radius:14px;
+    text-align:left;
+  }
+  .paywall.show{ display:block; }
+  .paywall .pw-title{ font-size: 1.2rem; font-weight:700; margin-bottom:6px; }
+  .paywall .pw-sub{ font-size:14px; color:var(--text-dim); margin-bottom: 22px; }
+  .plans{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+  @media (max-width:480px){ .plans{ grid-template-columns:1fr; } }
+  .plan{
+    border:1px solid var(--border); background: var(--bg-input);
+    padding: 20px 18px; border-radius:12px; text-align:left; cursor:pointer;
+    transition: border-color 0.2s ease;
+  }
+  .plan:hover{ border-color: var(--accent); }
+  .plan.recommended{ border-color: var(--accent); }
+  .plan .plan-name{ font-size:12px; color: var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.03em; }
+  .plan .plan-price{ font-size:1.6rem; font-weight:700; margin-bottom:4px; }
+  .plan .plan-price span{ font-size:0.85rem; color:var(--text-dim); font-weight:400; }
+  .plan .plan-desc{ font-size:13px; color:var(--text-dim); }
+  .pw-status{ margin-top:16px; font-size:13px; color:var(--text-dim); }
+
+  footer{
+    border-top:1px solid var(--border);
+    padding: 22px 6vw; text-align:center;
+    font-size:12px; color: var(--text-dim);
+  }
+
+  /* ===== Боковой сайдбар =====
+     Выезжает слева ПОВЕРХ контента (страница не сдвигается и не сжимается).
+     top берётся из --header-h — реальной высоты шапки, которую JS отслеживает
+     через ResizeObserver, чтобы сайдбар всегда начинался ровно под шапкой,
+     даже если она перенесётся на две строки на узких экранах. */
+  .sidebar-overlay{
+    position:fixed; inset: var(--header-h, 65px) 0 0 0;
+    background: rgba(0,0,0,0.35);
+    opacity:0; pointer-events:none;
+    transition: opacity 0.2s ease;
+    z-index:150;
+  }
+  .sidebar-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .sidebar{
+    position:fixed; top: var(--header-h, 65px); left:0; bottom:0;
+    width:260px; max-width:80vw;
+    background: var(--bg-panel);
+    border-right:1px solid var(--border);
+    box-shadow: 8px 0 28px rgba(0,0,0,0.45);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index:200;
+    overflow-y:auto;
+    padding: 18px 14px;
+    text-align:left;
+  }
+  .sidebar.open{ transform: translateX(0); }
+
+  .sidebar-section{ margin-bottom:22px; }
+  .sidebar-title{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color: var(--text-dim); padding: 0 10px 8px;
+  }
+  .sidebar-link{
+    display:flex; align-items:center; gap:10px;
+    width:100%; background:none; border:none; color: var(--text);
+    font-size:14px; text-align:left; padding:10px 10px; border-radius:8px;
+    cursor:pointer; transition: background 0.15s ease; text-decoration:none;
+  }
+  .sidebar-link:hover{ background: var(--bg-input); }
+  .sidebar-link.active{ color: var(--accent); background: rgba(31,86,220,0.1); }
+</style>
+<style>
+  /* ===== Верхняя панель ===== */
+  header{
+    position:fixed; top:0; left:0; right:0; height:var(--header-h);
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 0 20px 0 14px; border-bottom:1px solid var(--border);
+    background: var(--bg-panel);
+    gap:14px; z-index:220;
+  }
+  .header-left{ display:flex; align-items:center; gap:10px; }
+
+  .menu-trigger-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px; flex-shrink:0;
+    background:none; border:1px solid transparent; border-radius:9px;
+    color: var(--text-dim); cursor:pointer; padding:0;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .menu-trigger-btn:hover{ background: var(--bg-input); color: var(--text); }
+  .menu-trigger-btn.active{ border-color: var(--accent); color: var(--accent); background: rgba(31,86,220,0.1); }
+  .menu-trigger-btn svg{ width:17px; height:17px; }
+
+  .brand{ display:flex; align-items:center; gap:9px; font-weight:700; font-size:15px; text-decoration:none; color: var(--text); padding:6px 6px 6px 2px; border-radius:8px; }
+  .brand:visited{ color: var(--text); }
+  .brand .logo{
+    width:26px; height:26px; border-radius:7px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-icon));
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+    flex-shrink:0;
+  }
+  .brand-divider{ width:1px; height:22px; background: var(--border); flex-shrink:0; }
+  .code-icon-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:32px; height:32px; flex-shrink:0; border-radius:8px;
+    color: var(--text-dim); text-decoration:none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .code-icon-btn:hover{ background: var(--bg-input); color: var(--text); }
+  .code-icon-btn svg{ width:17px; height:17px; }
+  .header-page-title{ font-size:14px; font-weight:600; color: var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .header-right{ display:flex; align-items:center; gap:10px; }
+  .theme-toggle-pill{
+    display:inline-flex; align-items:center; gap:2px;
+    border:1px solid var(--border); border-radius:10px; padding:3px; flex-shrink:0;
+  }
+  .theme-seg{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:7px; flex-shrink:0;
+    background:none; border:none; color: var(--text-dim); cursor:pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .theme-seg svg{ width:15px; height:15px; }
+  .theme-seg.active{ background: var(--bg-input); color: var(--text); }
+  .theme-seg:not(.active):hover{ color: var(--text); }
+  .header-cta{
+    font-size:13px; font-weight:600; padding:8px 15px; border-radius:9px;
+    border:1px solid var(--accent); background: var(--accent); color:#fff;
+    text-decoration:none; cursor:pointer; transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .header-cta:hover{ background: var(--accent-dim); border-color: var(--accent-dim); }
+
+  main{
+    max-width: 900px; margin: 0; padding: 56px 40px 96px;
+    margin-left: calc(var(--rail-w) + var(--sidebar-w));
+    padding-top: calc(var(--header-h) + 56px);
+    text-align:left;
+    transition: margin-left 0.2s ease;
+  }
+  body.sidebar-collapsed main{ margin-left: calc(var(--rail-w) + var(--sidebar-w-collapsed)); }
+
+
+  footer{
+    border-top:1px solid var(--border);
+    padding: 22px 40px 22px calc(var(--rail-w) + var(--sidebar-w) + 40px); text-align:left;
+    font-size:12px; color: var(--text-dim);
+    transition: padding-left 0.2s ease;
+  }
+  body.sidebar-collapsed footer{ padding-left: calc(var(--rail-w) + var(--sidebar-w-collapsed) + 40px); }
+
+  /* ===== Боковой сайдбар (персистентный, сворачиваемый) ===== */
+  .sidebar-overlay{
+    position:fixed; inset: var(--header-h) 0 0 0;
+    background: rgba(0,0,0,0.4);
+    opacity:0; pointer-events:none;
+    transition: opacity 0.2s ease;
+    z-index:150;
+    display:none;
+  }
+  .sidebar-overlay.open{ opacity:1; pointer-events:auto; }
+
+  /* ===== Слим-рейл с иконками (постоянно видима на десктопе) ===== */
+  .icon-rail{
+    position:fixed; top: var(--header-h); left:0; bottom:0; width: var(--rail-w);
+    background: var(--bg-panel); border-right:1px solid var(--border);
+    z-index:210; display:flex; flex-direction:column; align-items:center;
+    padding:14px 0; gap:8px;
+  }
+  .rail-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:38px; height:38px; border-radius:10px; flex-shrink:0;
+    background:none; border:none; color: var(--text-dim); cursor:pointer;
+    text-decoration:none; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .rail-btn svg{ width:19px; height:19px; }
+  .rail-btn:hover{ background: var(--bg-input); color: var(--text); }
+  .rail-btn.active{ background: var(--accent); color:#fff; }
+  .rail-btn.active:hover{ background: var(--accent); color:#fff; }
+  .rail-spacer{ flex:1; }
+
+  .sidebar{
+    position:fixed; top: var(--header-h); left: var(--rail-w); bottom:0;
+    width: var(--sidebar-w);
+    background: var(--bg-panel);
+    border-right:1px solid var(--border);
+    transition: width 0.2s ease, padding 0.2s ease;
+    z-index:200;
+    overflow-y:auto; overflow-x:hidden;
+    padding: 16px 12px;
+    text-align:left;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  body.sidebar-collapsed .sidebar{ width: var(--sidebar-w-collapsed); padding:16px 0; border-right-color:transparent; }
+  body.sidebar-collapsed .sidebar-section,
+  body.sidebar-collapsed .sidebar-footer{ opacity:0; pointer-events:none; }
+
+  .sidebar-spacer{ flex:1; }
+  .sidebar-footer{ display:flex; flex-direction:column; gap:10px; padding-top:8px; white-space:nowrap; }
+  .queue-card{
+    border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+    background: var(--bg-elevated); display:flex; flex-direction:column; gap:6px;
+  }
+  .queue-row{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:600; color:var(--text); }
+  .queue-row.dim{ color: var(--text-dim); font-weight:500; }
+  .queue-row svg{ width:16px; height:16px; flex-shrink:0; }
+  .theme-row{
+    display:flex; align-items:center; gap:10px; width:100%;
+    background:none; border:none; color:var(--text); font-size:13.5px; font-weight:500;
+    padding:8px 10px; border-radius:9px; cursor:pointer; text-align:left;
+    transition: background 0.15s ease;
+  }
+  .theme-row:hover{ background: var(--bg-input); }
+  .theme-row-icon{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:8px; background: var(--bg-input); flex-shrink:0;
+  }
+  .theme-row-icon svg{ width:14px; height:14px; }
+
+  .sidebar-section{ margin-bottom:18px; }
+  body.sidebar-collapsed .sidebar-section{ margin-bottom:10px; }
+  .sidebar-title{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color: var(--text-dim); padding: 0 10px 8px;
+    white-space:nowrap; overflow:hidden;
+  }
+  body.sidebar-collapsed .sidebar-title{ opacity:0; height:0; padding:0; margin:0; }
+
+  .sidebar-link{
+    display:flex; align-items:center; gap:11px;
+    width:100%; background:none; border:none; color: var(--text-dim);
+    font-size:13.5px; font-weight:500; text-align:left; padding:9px 10px; border-radius:9px;
+    cursor:pointer; transition: background 0.15s ease, color 0.15s ease; text-decoration:none;
+    white-space:nowrap; overflow:hidden;
+  }
+  .sidebar-link .sl-icon{ width:18px; height:18px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; }
+  .sidebar-link .sl-icon svg{ width:18px; height:18px; }
+  .sidebar-link .sl-icon.sl-badge{ width:25px; height:25px; border-radius:7px; color:#fff; }
+  .sidebar-link .sl-icon.sl-badge svg{ width:14px; height:14px; }
+  .sidebar-link .sl-label{ overflow:hidden; text-overflow:ellipsis; }
+  body.sidebar-collapsed .sidebar-link{ justify-content:center; padding:9px 0; }
+  body.sidebar-collapsed .sidebar-link .sl-label{ display:none; }
+  .sidebar-link:hover{ background: var(--bg-input); color: var(--text); }
+  .sidebar-link.active{ color: var(--text); background: rgba(31,86,220,0.12); }
+  .sidebar-link.active .sl-icon{ color: var(--accent); }
+
+  @media (max-width: 900px){
+    header{ padding-left:14px; }
+    .icon-rail{ display:none; }
+    .sidebar{ left:0; transform: translateX(-100%); width:260px !important; padding:18px 14px !important; box-shadow: 8px 0 28px rgba(0,0,0,0.45); }
+    .sidebar.open{ transform: translateX(0); }
+    body.sidebar-collapsed .sidebar-section,
+    body.sidebar-collapsed .sidebar-footer{ opacity:1; pointer-events:auto; }
+    body.sidebar-collapsed .sidebar-title{ opacity:1; height:auto; padding:0 10px 8px; }
+    body.sidebar-collapsed .sidebar-link{ justify-content:flex-start; padding:9px 10px; }
+    body.sidebar-collapsed .sidebar-link .sl-label{ display:inline; }
+    main, body.sidebar-collapsed main{ margin-left:0 !important; padding-left:20px; padding-right:20px; }
+    footer, body.sidebar-collapsed footer{ padding-left:20px; }
+    .sidebar-overlay{ display:block; }
+    .why-grid{ grid-template-columns:1fr; }
+    .recent-row{ grid-template-columns: 1fr auto; grid-template-rows:auto auto; row-gap:6px; }
+    .recent-arrow, .recent-time{ display:none; }
+  }
+  @media (max-width:640px){
+    .header-page-title{ display:none; }
+  }
+
+  .header-right{ display:flex; align-items:center; gap:12px; }
+</style>
+</head>
+<body>
+<script>if(localStorage.getItem('ch_sidebar_collapsed')==='1')document.body.classList.add('sidebar-collapsed');</script>
+<header id="siteHeader">
+  <div class="header-left">
+    <button class="menu-trigger-btn" id="menuTriggerBtn" aria-label="Свернуть/развернуть меню" aria-expanded="true">
+      <svg id="menuTriggerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"></line>
+        <line x1="4" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="18" x2="20" y2="18"></line>
+      </svg>
+    </button>
+    <a class="brand" href="/ru/"><span class="logo">C</span> ConvertHub</a>
+    <span class="brand-divider"></span>
+    <span class="header-page-title">HEIC → в любой формат</span>
+  </div>
+  <div class="header-right">
+    <div id="counterBadge">…</div>
+    <a class="header-cta" id="registerBtn" href="#">Регистрация</a>
+  </div>
+</header>
+
+<nav class="icon-rail" id="iconRail" aria-label="Быстрая навигация">
+  <a class="rail-btn" href="/ru/" aria-label="Главная" title="Главная">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+  </a>
+  <a class="rail-btn" href="/ru/apps/" aria-label="Все инструменты" title="Все инструменты">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+  </a>
+  <a class="rail-btn" href="/ru/history/" aria-label="История конвертаций" title="История конвертаций">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+  </a>
+  <a class="rail-btn" href="/ru/favorites/" aria-label="Избранное" title="Избранное">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 3Z"/></svg>
+  </a>
+  <div class="rail-spacer"></div>
+  <a class="rail-btn" href="/ru/settings/" aria-label="Настройки" title="Настройки">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09c0 .69.4 1.31 1 1.51.63.24 1.35.12 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.45.47-.57 1.19-.33 1.82.2.6.82 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.69 0-1.31.4-1.51 1z"/></svg>
+  </a>
+</nav>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar" aria-hidden="true">
+  <div class="sidebar-section">
+    <div class="sidebar-title">Главная</div>
+    <a class="sidebar-link" href="/ru/">
+      <span class="sl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></span>
+      <span class="sl-label">Конвертер файлов</span>
+    </a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Конвертация</div>
+    <button class="sidebar-link active" data-action="scroll-top">
+      <span class="sl-icon sl-badge" style="background:linear-gradient(135deg,var(--accent),var(--accent-icon))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5-9 9"/></svg></span>
+      <span class="sl-label">HEIC → в любой формат</span>
+    </button>
+    <a class="sidebar-link" href="/ru/heic-to/">
+      <span class="sl-icon sl-badge" style="background:linear-gradient(135deg,var(--border-grad-1),var(--border-grad-2))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H8a4 4 0 0 0-4 4v1"/><path d="m8 21-4-4 4-4"/><path d="M4 17h12a4 4 0 0 0 4-4v-1"/></svg></span>
+      <span class="sl-label">Любой формат → HEIC</span>
+    </a>
+    <a class="sidebar-link" href="/ru/ebook/">
+      <span class="sl-icon sl-badge" style="background:linear-gradient(135deg,#3ecf8e,#2fae77)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span>
+      <span class="sl-label">Книги → в любой формат</span>
+    </a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Аккаунт</div>
+    <a class="sidebar-link" href="/ru/pricing/">
+      <span class="sl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+      <span class="sl-label">Тарифы и подписка</span>
+    </a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Информация</div>
+    <a class="sidebar-link" href="/ru/privacy/">
+      <span class="sl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+      <span class="sl-label">Конфиденциальность</span>
+    </a>
+    <a class="sidebar-link" href="/ru/support/">
+      <span class="sl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg></span>
+      <span class="sl-label">Поддержка</span>
+    </a>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="sidebar-footer" id="sidebarFooter">
+    
+  </div>
+</aside>
+
+<main>
+  <h1>HEIC → выберите формат</h1>
+  <p class="sub">Конвертация происходит прямо в браузере. Файлы никуда не загружаются.</p>
+
+  <div class="convert-widget" id="dropzone">
+    <input type="file" id="fileInput" accept=".heic,.heif" multiple style="display:none">
+
+    <!-- Плашка со статистикой — цифры пока заглушка, замени на реальные
+         данные из бэкенда (например, отдельный /api/stats), когда появится
+         учёт по всем пользователям. Закрывается крестиком и запоминает
+         это в localStorage, чтобы не показывалась повторно. -->
+    <div class="cw-stats hidden" id="cwStats">
+      <button type="button" class="cw-stats-close" id="cwStatsClose" aria-label="Скрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      Мы преобразовали <b id="cwStatsFiles">3 309 088</b> файлов общим размером <b id="cwStatsSize">60 086</b> ГБ
+    </div>
+
+    <div class="cw-top">
+      <div class="cw-choose">
+        <button type="button" class="cw-choose-btn" id="chooseFilesBtn">
+          <svg class="cw-choose-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><circle cx="16" cy="14" r="2.4"/><path d="M20 17.6 22 20"/></svg>
+          Выберите файлы
+        </button>
+        <button type="button" class="cw-cloud-btn" title="Dropbox — скоро" data-toast="Загрузка из Dropbox скоро появится">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="m6 2 6 3.8L6 9.6 0 5.8 6 2Zm12 0 6 3.8-6 3.8-6-3.8L18 2ZM0 13.4l6-3.8 6 3.8-6 3.8-6-3.8Zm18-3.8 6 3.8-6 3.8-6-3.8 6-3.8ZM6 17.9l6-3.8 6 3.8-6 3.7-6-3.7Z"/></svg>
+        </button>
+        <button type="button" class="cw-cloud-btn" title="Google Drive — скоро" data-toast="Загрузка из Google Drive скоро появится">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.6 2h8.8l7.1 12.3-4.4 7.7H4.9L.5 14.3 7.6 2Zm1.1 2-5.4 9.4h10.8L8.7 4Zm2 10.4L6.3 22h11.4l-2.1-3.7-4.9-3.9Zm7.3-1L13.9 22h5.6l3-5.3-3.5-5.3ZM8.1 4l4.4 7.6h5.4L13.5 4H8.1Z"/></svg>
+        </button>
+      </div>
+
+      <div class="cw-formats">
+        <div class="fmt-picker" id="sourcePicker">
+          <button type="button" class="fmt-btn dark" id="sourceBtn">
+            <span id="sourceBtnLabel">HEIC</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="fmt-dropdown fmt-dropdown-source" id="sourceDropdown">
+            <button type="button" class="fmt-chip">HEIC</button>
+            <button type="button" class="fmt-chip">HEIF</button>
+          </div>
+        </div>
+
+        <span class="cw-arrow">в</span>
+
+        <div class="fmt-picker" id="targetPicker">
+          <button type="button" class="fmt-btn light" id="targetBtn">
+            <span id="targetBtnLabel">Выберите формат</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="fmt-dropdown fmt-dropdown-target" id="targetDropdown">
+            <div class="fmt-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="fmtSearch" placeholder="Поиск">
+            </div>
+            <div class="fmt-body">
+              <div class="fmt-categories" id="fmtCategories">
+                <button type="button" class="fmt-cat active" data-cat="image">Изображение <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="doc">Документ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="vector">Вектор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+              </div>
+              <div class="fmt-grid" id="fmtGrid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cw-hint" id="dzHint">Перетащите файлы сюда · 1 GB максимальный размер файла или <a href="#" id="registerLink">Регистрация</a></div>
+  </div>
+
+  <div class="paywall" id="paywall">
+    <div class="pw-title">Лимит на сегодня закончился</div>
+    <div class="pw-sub">Бесплатно доступно 5 файлов в день. Продолжить можно так:</div>
+    <div class="plans">
+      <div class="plan" data-plan="day">
+        <div class="plan-name">На сегодня</div>
+        <div class="plan-price">$1</div>
+        <div class="plan-desc">Безлимит до полуночи</div>
+      </div>
+      <div class="plan recommended" data-plan="month">
+        <div class="plan-name">Подписка</div>
+        <div class="plan-price">$3 <span>/ мес</span></div>
+        <div class="plan-desc">Безлимит на 30 дней</div>
+      </div>
+    </div>
+    <div class="pw-status" id="pwStatus"></div>
+  </div>
+
+  <div class="contact-sheet" id="sheet"></div>
+</main>
+
+<footer>ConvertHub — без сервера, без слежки, без очереди</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
+<script>
+  /* ===== Сайдбар ===== */
+    (function initSidebar(){
+    const header = document.getElementById('siteHeader');
+    const btn = document.getElementById('menuTriggerBtn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function syncHeaderHeight(){
+      document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+    }
+    syncHeaderHeight();
+    if(typeof ResizeObserver !== 'undefined'){
+      new ResizeObserver(syncHeaderHeight).observe(header);
+    } else {
+      window.addEventListener('resize', syncHeaderHeight);
+    }
+
+    const isMobile = () => window.matchMedia('(max-width: 900px)').matches;
+
+    function setMobileOpen(open){
+      sidebar.classList.toggle('open', open);
+      overlay.classList.toggle('open', open);
+      btn.classList.toggle('active', open);
+      btn.setAttribute('aria-expanded', String(open));
+      sidebar.setAttribute('aria-hidden', String(!open));
+    }
+
+    function setCollapsed(collapsed){
+      document.body.classList.toggle('sidebar-collapsed', collapsed);
+      btn.setAttribute('aria-expanded', String(!collapsed));
+      localStorage.setItem('ch_sidebar_collapsed', collapsed ? '1' : '0');
+    }
+
+    if(localStorage.getItem('ch_sidebar_collapsed') === '1'){
+      setCollapsed(true);
+    }
+
+    btn.addEventListener('click', ()=>{
+      if(isMobile()){
+        setMobileOpen(!sidebar.classList.contains('open'));
+      } else {
+        setCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+      }
+    });
+    overlay.addEventListener('click', ()=> setMobileOpen(false));
+    document.addEventListener('keydown', e=>{ if(e.key === 'Escape') setMobileOpen(false); });
+
+    sidebar.querySelectorAll('.sidebar-link').forEach(link=>{
+      link.addEventListener('click', (e)=>{
+        const action = link.dataset.action;
+        if(action === 'scroll-top'){
+          document.getElementById('dropzone')?.scrollIntoView({behavior:'smooth', block:'center'});
+        }
+        if(isMobile()) setMobileOpen(false);
+      });
+    });
+
+    const registerBtn = document.getElementById('registerBtn');
+    if(registerBtn){
+      registerBtn.addEventListener('click', e=>{
+        e.preventDefault();
+        if(typeof showToast === 'function') showToast('Регистрация скоро появится');
+      });
+    }
+  })();
+
+  /* ===== Плашка со статистикой — закрывается и запоминает это в localStorage ===== */
+  (function initStatsBar(){
+    const bar = document.getElementById('cwStats');
+    const closeBtn = document.getElementById('cwStatsClose');
+    if(localStorage.getItem('ch_stats_dismissed') === '1'){
+      bar.classList.add('hidden');
+    }
+    closeBtn.addEventListener('click', ()=>{
+      bar.classList.add('hidden');
+      localStorage.setItem('ch_stats_dismissed', '1');
+    });
+  })();
+
+  const FREE_LIMIT = 5;
+
+  function getToken(){
+    let token = localStorage.getItem('ch_token');
+    if(!token){
+      token = 'u_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('ch_token', token);
+    }
+    return token;
+  }
+  const token = getToken();
+
+  function todayKey(){
+    const d = new Date();
+    return `ch_count_${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+  function getTodayCount(){ return parseInt(localStorage.getItem(todayKey()) || '0', 10); }
+  function incTodayCount(){ localStorage.setItem(todayKey(), String(getTodayCount()+1)); }
+
+  let paidUntil = parseInt(localStorage.getItem('ch_paid_until') || '0', 10);
+  function isPaidNow(){ return paidUntil && paidUntil > Date.now(); }
+
+  async function refreshPaidStatus(){
+    try{
+      const res = await fetch(`/api/check-status?token=${token}`);
+      const data = await res.json();
+      if(data.paid){
+        paidUntil = data.expiresAt;
+        localStorage.setItem('ch_paid_until', String(paidUntil));
+      }
+    }catch(e){ console.error('Не удалось проверить статус оплаты', e); }
+    updateUI();
+  }
+
+  function updateUI(){
+    const badge = document.getElementById('counterBadge');
+    const dropzone = document.getElementById('dropzone');
+    const paywall = document.getElementById('paywall');
+    const dzHint = document.getElementById('dzHint');
+
+    if(isPaidNow()){
+      badge.innerHTML = `<b>∞</b> безлимит`;
+      badge.classList.add('unlimited');
+      dropzone.classList.remove('locked');
+      paywall.classList.remove('show');
+      dzHint.textContent = 'или перетащите файлы сюда · безлимит активен';
+      return;
+    }
+
+    const used = getTodayCount();
+    const left = Math.max(0, FREE_LIMIT - used);
+    badge.innerHTML = `<b>${left}</b> из ${FREE_LIMIT} сегодня`;
+    badge.classList.remove('unlimited');
+
+    if(left <= 0){
+      dropzone.classList.add('locked');
+      paywall.classList.add('show');
+    }else{
+      dropzone.classList.remove('locked');
+      paywall.classList.remove('show');
+    }
+  }
+
+  if(new URLSearchParams(location.search).get('paid') === '1'){
+    document.getElementById('pwStatus').textContent = 'Проверяем оплату…';
+    refreshPaidStatus();
+    history.replaceState({}, '', location.pathname);
+  } else {
+    updateUI();
+  }
+
+  setInterval(()=>{ if(!isPaidNow()) refreshPaidStatus(); }, 15000);
+
+  document.querySelectorAll('.plan').forEach(planEl=>{
+    planEl.addEventListener('click', async ()=>{
+      const plan = planEl.dataset.plan;
+      const statusEl = document.getElementById('pwStatus');
+      statusEl.textContent = 'Создаём счёт на оплату…';
+      try{
+        const res = await fetch('/api/create-invoice', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, plan })
+        });
+        const data = await res.json();
+        if(data.invoice_url){
+          window.location.href = data.invoice_url;
+        }else{
+          statusEl.textContent = 'Ошибка: не удалось создать счёт. Попробуйте позже.';
+        }
+      }catch(e){
+        console.error(e);
+        statusEl.textContent = 'Ошибка соединения. Попробуйте позже.';
+      }
+    });
+  });
+
+  /* ===== Виджет выбора форматов ===== */
+  let targetFormat = null; // пока пользователь не выбрал формат — конвертация недоступна
+  let selectedTargetCode = null;
+
+  // Список форматов конвертации изображений — здесь оставлены только реально
+  // рабочие форматы (конвертация через canvas в браузере, см.
+  // encodeCanvasToFormat и байтовые энкодеры выше неё — все побайтово
+  // провалидированы через ImageMagick/Pillow round-trip перед вставкой сюда).
+  // Форматы без готового энкодера (JPEG2000, AVIF/AV1, JBIG, CCITT-факс,
+  // PhotoCD и т.п. — то, что без тяжёлых доп.библиотек честно не собрать
+  // в браузере) из списка убраны, чтобы не показывать неработающие пункты.
+  const IMAGE_FORMATS = [
+    {code:'JPG', enabled:true}, {code:'PNG', enabled:true}, {code:'JPEG', enabled:true},
+    {code:'WEBP', enabled:true}, {code:'TIFF', enabled:true}, {code:'GIF', enabled:true},
+    {code:'BMP', enabled:true}, {code:'PSD', enabled:true}, {code:'HDR', enabled:true},
+    {code:'JPE', enabled:true}, {code:'ICO', enabled:true}, {code:'JFIF', enabled:true},
+    {code:'RGB', enabled:true}, {code:'JPS', enabled:true}, {code:'CUR', enabled:true},
+    {code:'JIF', enabled:true}, {code:'WBMP', enabled:true}, {code:'PPM', enabled:true},
+    {code:'PGM', enabled:true}, {code:'TGA', enabled:true}, {code:'PBM', enabled:true},
+    {code:'MTV', enabled:true}, {code:'PAM', enabled:true}, {code:'PFM', enabled:true},
+    {code:'PICON', enabled:true}, {code:'PNM', enabled:true}, {code:'RAS', enabled:true},
+    {code:'RGBA', enabled:true}, {code:'SGI', enabled:true}, {code:'SUN', enabled:true},
+    {code:'XBM', enabled:true}, {code:'XPM', enabled:true}, {code:'JFI', enabled:true},
+  ];
+
+  // Заглушки-списки для остальных разделов — коды форматов взяты из примера,
+  // все пока неактивны (клик даёт тост "скоро"). Раздел "Вектор" — исключение:
+  // источник тут растровое фото, поэтому это не трассировка контуров, а
+  // честная упаковка того же PNG/JPEG-растра в векторный контейнер (SVG —
+  // <image> с data URI, EPS/PS — оператор colorimage с ASCIIHex, AI — с
+  // версии 9 это PDF, кладём JPEG через XObject/DCTDecode). Все четыре
+  // энкодера побайтово провалидированы round-trip'ом через
+  // Ghostscript/ImageMagick (см. encodeSVGFile/encodePostScriptFile/
+  // encodeAIFile выше encodeCanvasToFormat).
+  function toFormats(codes){ return codes.map(code => ({code, enabled:false})); }
+  const FORMATS = {
+    image: IMAGE_FORMATS,
+    doc: toFormats(['PDF','DOC','DOCX','XPS','DOCM','DOTX','ABW','AW','ODT','RTF','DOT','DOTM','DJVU','DBK','KWD','SXW','OXPS']),
+    ebook: [
+      {code:'EPUB', enabled:true}, {code:'FB2', enabled:true}, {code:'TXT', enabled:true},
+      {code:'PDB', enabled:true},
+    ],
+    vector: [
+      {code:'SVG', enabled:true}, {code:'EPS', enabled:true},
+      {code:'PS', enabled:true}, {code:'AI', enabled:true},
+    ],
+  };
+  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', vector:'Вектор' };
+  let currentCategory = 'image';
+
+  function showToast(msg){
+    let t = document.getElementById('cwToast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'cwToast';
+      t.className = 'cw-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(()=> t.classList.remove('show'), 2200);
+  }
+
+  function selectTargetFormat(code){
+    selectedTargetCode = code;
+    targetFormat = code;
+    document.getElementById('targetBtnLabel').textContent = code;
+    renderFmtGrid(document.getElementById('fmtSearch').value);
+    closeAllDropdowns();
+  }
+
+  function renderFmtGrid(filter){
+    const grid = document.getElementById('fmtGrid');
+    const q = (filter || '').trim().toUpperCase();
+    const list = FORMATS[currentCategory] || [];
+    grid.innerHTML = '';
+    const matches = list.filter(f => !q || f.code.includes(q));
+    matches.forEach(f=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fmt-chip' + (f.enabled ? '' : ' disabled') + (f.code === selectedTargetCode ? ' active' : '');
+      btn.textContent = f.code;
+      if(f.enabled){
+        btn.addEventListener('click', ()=>{
+          if(currentCategory === 'ebook'){
+            // Эта страница конвертирует только HEIC/HEIF — книжный движок
+            // живёт на /ru/ebook/. Переходим туда только когда реально
+            // выбрали формат книги, а не просто открыли раздел для обзора.
+            closeAllDropdowns();
+            showToast('Переходим в конвертер книг…');
+            setTimeout(()=>{ window.location.href = `/ru/ebook/?to=${f.code.toLowerCase()}`; }, 700);
+            return;
+          }
+          selectTargetFormat(f.code);
+        });
+      } else {
+        btn.addEventListener('click', ()=> showToast(`${f.code} — конвертация скоро появится`));
+      }
+      grid.appendChild(btn);
+    });
+    if(!matches.length){
+      grid.innerHTML = '<div class="fmt-empty">Ничего не найдено</div>';
+    }
+  }
+  renderFmtGrid('');
+
+  // Если пришли с главной с уже выбранным форматом (?to=<код>) — применяем сразу,
+  // если этот формат реально включён (ищем по всем разделам, не только
+  // "Изображение" — с главной так же прилетают SVG/EPS/PS/AI из "Вектора").
+  (function applyIncomingFormat(){
+    const to = new URLSearchParams(location.search).get('to');
+    const code = to && to.toUpperCase();
+    const isEnabled = code && Object.values(FORMATS).some(list => list.some(f => f.enabled && f.code === code));
+    if(isEnabled){
+      selectTargetFormat(code);
+      history.replaceState({}, '', location.pathname);
+    }
+  })();
+
+  document.getElementById('fmtSearch').addEventListener('input', e=> renderFmtGrid(e.target.value));
+
+  // Переключение раздела — сетка форматов справа перерисовывается под выбранный
+  // раздел. Раньше клик по вкладке «Электронная книга» сразу перекидывал на
+  // /ru/ebook/ — это был баг: пользователь ещё ничего не выбрал, а его уже
+  // уносило со страницы. Теперь просто показываем список форматов книги, а
+  // переход на /ru/ebook/ происходит только по клику на конкретный формат
+  // (см. renderFmtGrid выше).
+  function switchCategory(cat){
+    const key = cat.dataset.cat;
+    if(key === currentCategory) return;
+    currentCategory = key;
+    document.querySelectorAll('.fmt-cat').forEach(c=>c.classList.remove('active'));
+    cat.classList.add('active');
+    document.getElementById('fmtSearch').value = '';
+    renderFmtGrid('');
+    // "Скоро появится" показываем только для разделов, где вообще нет ни
+    // одного рабочего формата — в "Векторе" теперь SVG/EPS/PS/AI реальные,
+    // в "Электронной книге" — EPUB/FB2/TXT/PDB (уводят на /ru/ebook/).
+    const hasWorkingFormat = (FORMATS[key] || []).some(f => f.enabled);
+    if(key !== 'image' && !hasWorkingFormat){
+      showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
+    }
+  }
+  document.querySelectorAll('.fmt-cat').forEach(cat=>{
+    cat.addEventListener('click', e=>{ e.stopPropagation(); switchCategory(cat); });
+    // Наведение курсора переключает раздел так же, как раньше — клик всё
+    // ещё нужен на тач-устройствах, где mouseenter не срабатывает.
+    cat.addEventListener('mouseenter', ()=> switchCategory(cat));
+  });
+
+  // Источник — HEIC/HEIF, оба уже поддерживаются, чип просто обновляет подпись.
+  document.querySelectorAll('#sourceDropdown .fmt-chip').forEach(chip=>{
+    chip.addEventListener('click', e=>{
+      e.stopPropagation();
+      document.getElementById('sourceBtnLabel').textContent = chip.textContent;
+      closeAllDropdowns();
+    });
+  });
+
+  // Dropbox / Google Drive — пока заглушки.
+  document.querySelectorAll('.cw-cloud-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      showToast(btn.dataset.toast || 'Скоро появится');
+    });
+  });
+
+  function closeAllDropdowns(){
+    document.querySelectorAll('.fmt-dropdown.open').forEach(d=>d.classList.remove('open'));
+    document.querySelectorAll('.fmt-btn.open').forEach(b=>b.classList.remove('open'));
+  }
+  function setupPicker(btnId, dropdownId){
+    const btn = document.getElementById(btnId);
+    const dropdown = document.getElementById(dropdownId);
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const wasOpen = dropdown.classList.contains('open');
+      closeAllDropdowns();
+      if(!wasOpen){
+        dropdown.classList.add('open');
+        btn.classList.add('open');
+      }
+    });
+    dropdown.addEventListener('click', e=> e.stopPropagation());
+  }
+  setupPicker('sourceBtn', 'sourceDropdown');
+  setupPicker('targetBtn', 'targetDropdown');
+  document.addEventListener('click', closeAllDropdowns);
+  document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeAllDropdowns(); });
+
+  document.getElementById('registerLink').addEventListener('click', e=>{
+    e.preventDefault();
+    showToast('Регистрация скоро появится');
+  });
+
+  document.getElementById('chooseFilesBtn').addEventListener('click', ()=> fileInput.click());
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const sheet = document.getElementById('sheet');
+
+  ['dragenter','dragover'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); if(!dropzone.classList.contains('locked')) dropzone.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.remove('drag'); });
+  });
+  dropzone.addEventListener('drop', e=>{
+    if(dropzone.classList.contains('locked')) return;
+    handleFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', e=>{ handleFiles(e.target.files); });
+
+  // ===== Конвертация: HEIC -> canvas -> нужный формат =====
+  // heic2any умеет декодировать HEIC только в JPEG/PNG. Поэтому сначала всегда
+  // получаем PNG (без потерь), рисуем на canvas, а из canvas уже кодируем
+  // в конечный формат — так один и тот же пайплайн покрывает сразу все
+  // остальные форматы без лишних зависимостей.
+  // Все энкодеры ниже (BMP/TGA/PPM/PGM/PBM/PNM/PAM/MTV/RGBA/RAS/SUN/PFM/XBM/
+  // XPM/WBMP/SGI/HDR/PSD/TIFF/GIF/ICO/CUR) побайтово провалидированы через
+  // Pillow/ImageMagick перед вставкой сюда.
+  const EXT_MAP = {
+    JPG:'jpg', PNG:'png', WEBP:'webp', BMP:'bmp', ICO:'ico', JFIF:'jfif', JPE:'jpe',
+    JPEG:'jpeg', JIF:'jif', JPS:'jps', TGA:'tga', PPM:'ppm', PGM:'pgm', PBM:'pbm',
+    WBMP:'wbmp', RGB:'rgb', SGI:'sgi', CUR:'cur', HDR:'hdr', GIF:'gif', PSD:'psd', TIFF:'tiff',
+    JFI:'jfi', PNM:'pnm', PAM:'pam', MTV:'mtv', RGBA:'rgba', RAS:'ras', SUN:'sun',
+    PFM:'pfm', XBM:'xbm', XPM:'xpm', PICON:'xpm',
+    SVG:'svg', EPS:'eps', PS:'ps', AI:'ai'
+  };
+
+  function loadImage(blob){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=> resolve(img);
+      img.onerror = ()=> reject(new Error('Не удалось декодировать изображение'));
+      img.src = URL.createObjectURL(blob);
+    });
+  }
+
+  async function heicToCanvas(file){
+    const result = await heic2any({ blob: file, toType: 'image/png', quality: 0.92 });
+    const pngBlob = Array.isArray(result) ? result[0] : result;
+    const img = await loadImage(pngBlob);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    // Белая подложка — чтобы форматы без альфа-канала не давали чёрные края
+    // на месте прозрачности.
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    return canvas;
+  }
+
+  function canvasToBlob(canvas, mime, quality){
+    return new Promise(resolve=> canvas.toBlob(resolve, mime, quality));
+  }
+
+  function getRGBAData(canvas){
+    return canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+  }
+
+  // ---------- BMP (24-битный, без сжатия, BITMAPINFOHEADER) ----------
+  function encodeBMP(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const rowSize = Math.floor((24 * w + 31) / 32) * 4;
+    const pixelArraySize = rowSize * h;
+    const fileSize = 54 + pixelArraySize;
+    const buf = new ArrayBuffer(fileSize);
+    const view = new DataView(buf);
+
+    view.setUint8(0, 0x42); view.setUint8(1, 0x4D);
+    view.setUint32(2, fileSize, true);
+    view.setUint32(6, 0, true);
+    view.setUint32(10, 54, true);
+    view.setUint32(14, 40, true);
+    view.setInt32(18, w, true);
+    view.setInt32(22, h, true);
+    view.setUint16(26, 1, true);
+    view.setUint16(28, 24, true);
+    view.setUint32(30, 0, true);
+    view.setUint32(34, pixelArraySize, true);
+    view.setInt32(38, 2835, true);
+    view.setInt32(42, 2835, true);
+    view.setUint32(46, 0, true);
+    view.setUint32(50, 0, true);
+
+    let offset = 54;
+    for(let y = h - 1; y >= 0; y--){
+      for(let x = 0; x < w; x++){
+        const i = (y * w + x) * 4;
+        view.setUint8(offset++, data[i + 2]);
+        view.setUint8(offset++, data[i + 1]);
+        view.setUint8(offset++, data[i]);
+      }
+      for(let p = 0; p < rowSize - w * 3; p++) view.setUint8(offset++, 0);
+    }
+    return new Blob([buf], { type: 'image/bmp' });
+  }
+
+  // ---------- TGA (Truevision, несжатый true-color) ----------
+  function encodeTGA(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new Uint8Array(18);
+    header[2] = 2;
+    new DataView(header.buffer).setUint16(12, w, true);
+    new DataView(header.buffer).setUint16(14, h, true);
+    header[16] = 24;
+    header[17] = 0x20; // top-left origin
+    const pixels = new Uint8Array(w * h * 3);
+    let p = 0;
+    for(let i = 0; i < data.length; i += 4){
+      pixels[p++] = data[i+2]; pixels[p++] = data[i+1]; pixels[p++] = data[i];
+    }
+    return new Blob([header, pixels], { type: 'image/x-tga' });
+  }
+
+  // ---------- PPM / PGM / PBM (Netpbm) ----------
+  function encodePPM(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`P6\n${w} ${h}\n255\n`);
+    const pixels = new Uint8Array(w * h * 3);
+    let p = 0;
+    for(let i = 0; i < data.length; i += 4){
+      pixels[p++] = data[i]; pixels[p++] = data[i+1]; pixels[p++] = data[i+2];
+    }
+    return new Blob([header, pixels], { type: 'image/x-portable-pixmap' });
+  }
+  function encodePGM(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`P5\n${w} ${h}\n255\n`);
+    const pixels = new Uint8Array(w * h);
+    for(let i = 0, p = 0; i < data.length; i += 4, p++){
+      pixels[p] = Math.round(0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]);
+    }
+    return new Blob([header, pixels], { type: 'image/x-portable-graymap' });
+  }
+  function encodePBM(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`P4\n${w} ${h}\n`);
+    const rowBytes = Math.ceil(w / 8);
+    const pixels = new Uint8Array(rowBytes * h);
+    for(let y = 0; y < h; y++){
+      for(let x = 0; x < w; x++){
+        const i = (y*w+x)*4;
+        const lum = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+        if(lum < 128) pixels[y*rowBytes + (x>>3)] |= (0x80 >> (x&7));
+      }
+    }
+    return new Blob([header, pixels], { type: 'image/x-portable-bitmap' });
+  }
+
+  // ---------- WBMP (Wireless Bitmap, 1-бит) ----------
+  function encodeMBI(value){
+    let bytes = [value & 0x7F];
+    let v = value >> 7;
+    while(v > 0){ bytes.unshift((v & 0x7F) | 0x80); v >>= 7; }
+    return bytes;
+  }
+  function encodeWBMP(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const rowBytes = Math.ceil(w / 8);
+    const pixels = new Uint8Array(rowBytes * h);
+    for(let y = 0; y < h; y++){
+      for(let x = 0; x < w; x++){
+        const i = (y*w+x)*4;
+        const lum = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+        if(lum >= 128) pixels[y*rowBytes + (x>>3)] |= (0x80 >> (x&7)); // 1 = белый
+      }
+    }
+    const header = new Uint8Array([0x00, 0x00, ...encodeMBI(w), ...encodeMBI(h)]);
+    return new Blob([header, pixels], { type: 'image/vnd.wap.wbmp' });
+  }
+
+  // ---------- SGI / RGB (Silicon Graphics, несжатый) ----------
+  function encodeSGI(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const headerSize = 512, channels = 3;
+    const buf = new ArrayBuffer(headerSize + w*h*channels);
+    const view = new DataView(buf);
+    view.setUint16(0, 0x01DA, false);
+    view.setUint8(2, 0); view.setUint8(3, 1);
+    view.setUint16(4, 3, false);
+    view.setUint16(6, w, false); view.setUint16(8, h, false);
+    view.setUint16(10, channels, false);
+    view.setUint32(12, 0, false); view.setUint32(16, 255, false);
+    const out = new Uint8Array(buf);
+    let offset = headerSize;
+    for(let z = 0; z < channels; z++){
+      for(let y = h-1; y >= 0; y--){
+        for(let x = 0; x < w; x++){
+          out[offset++] = data[(y*w+x)*4 + z];
+        }
+      }
+    }
+    return new Blob([out], { type: 'image/x-sgi' });
+  }
+
+  // ---------- HDR (Radiance RGBE) ----------
+  function encodeHDR(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${h} +X ${w}\n`);
+    const body = new Uint8Array(w*h*4);
+    let p = 0;
+    for(let i = 0; i < data.length; i += 4){
+      const r = data[i]/255, g = data[i+1]/255, b = data[i+2]/255;
+      const max = Math.max(r,g,b);
+      if(max < 1e-8){
+        body[p++]=0; body[p++]=0; body[p++]=0; body[p++]=0;
+      } else {
+        const e = Math.ceil(Math.log2(max));
+        const scale = Math.pow(2, -e+8);
+        body[p++] = Math.min(255, Math.floor(r*scale));
+        body[p++] = Math.min(255, Math.floor(g*scale));
+        body[p++] = Math.min(255, Math.floor(b*scale));
+        body[p++] = e+128;
+      }
+    }
+    return new Blob([header, body], { type: 'image/vnd.radiance' });
+  }
+
+  // ---------- PSD (плоский, один слой, без сжатия) ----------
+  function encodePSD(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new Uint8Array(26);
+    const hv = new DataView(header.buffer);
+    header.set(new TextEncoder().encode('8BPS'), 0);
+    hv.setUint16(4, 1, false);
+    hv.setUint16(12, 3, false);
+    hv.setUint32(14, h, false);
+    hv.setUint32(18, w, false);
+    hv.setUint16(22, 8, false);
+    hv.setUint16(24, 3, false);
+
+    const emptySection = new Uint8Array(4); // length=0 (colorMode/imageResources/layerMask)
+    const compressionField = new Uint8Array(2); // 0 = raw
+
+    const planeSize = w*h;
+    const imageData = new Uint8Array(planeSize*3);
+    let p = 0;
+    for(let z = 0; z < 3; z++){
+      for(let i = 0; i < data.length; i += 4){
+        imageData[p++] = data[i+z];
+      }
+    }
+    return new Blob([header, emptySection, emptySection, emptySection, compressionField, imageData], { type: 'image/vnd.adobe.photoshop' });
+  }
+
+  // ---------- TIFF (несжатый, chunky RGB) ----------
+  function encodeTIFF(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const imageDataOffset = 8;
+    const imageDataSize = w*h*3;
+    const ifdOffset = imageDataOffset + imageDataSize;
+    const numEntries = 10;
+    const ifdSize = 2 + numEntries*12 + 4;
+    const bpsOffset = ifdOffset + ifdSize;
+    const total = bpsOffset + 6;
+
+    const buf = new ArrayBuffer(total);
+    const view = new DataView(buf);
+    const out = new Uint8Array(buf);
+    out.set(new TextEncoder().encode('II'), 0);
+    view.setUint16(2, 42, true);
+    view.setUint32(4, ifdOffset, true);
+
+    let p = imageDataOffset;
+    for(let i = 0; i < data.length; i += 4){
+      out[p++] = data[i]; out[p++] = data[i+1]; out[p++] = data[i+2];
+    }
+
+    function writeEntry(offset, tag, type, count, value){
+      view.setUint16(offset, tag, true);
+      view.setUint16(offset+2, type, true);
+      view.setUint32(offset+4, count, true);
+      view.setUint32(offset+8, value, true);
+    }
+
+    let o = ifdOffset;
+    view.setUint16(o, numEntries, true); o += 2;
+    writeEntry(o, 256, 3, 1, w); o+=12;
+    writeEntry(o, 257, 3, 1, h); o+=12;
+    writeEntry(o, 258, 3, 3, bpsOffset); o+=12;
+    writeEntry(o, 259, 3, 1, 1); o+=12;
+    writeEntry(o, 262, 3, 1, 2); o+=12;
+    writeEntry(o, 273, 4, 1, imageDataOffset); o+=12;
+    writeEntry(o, 277, 3, 1, 3); o+=12;
+    writeEntry(o, 278, 3, 1, h); o+=12;
+    writeEntry(o, 279, 4, 1, imageDataSize); o+=12;
+    writeEntry(o, 284, 3, 1, 1); o+=12;
+    view.setUint32(o, 0, true); o+=4;
+
+    view.setUint16(bpsOffset, 8, true);
+    view.setUint16(bpsOffset+2, 8, true);
+    view.setUint16(bpsOffset+4, 8, true);
+
+    return new Blob([buf], { type: 'image/tiff' });
+  }
+
+  // ---------- GIF (статичный, 252-цветная фиксированная палитра + LZW) ----------
+  // Индекс палитры считается напрямую по квантованным R/G/B — без построения
+  // гистограммы и поиска ближайшего цвета, поэтому кодирование быстрое даже
+  // для больших фото. Тайминг увеличения битности кода подобран и
+  // провалидирован против настоящих GIF-декодеров (Pillow/ImageMagick).
+  const GIF_RLEV=6, GIF_GLEV=7, GIF_BLEV=6;
+  function buildGifPalette(){
+    const pal = new Uint8Array(256*3);
+    let i = 0;
+    for(let r=0;r<GIF_RLEV;r++)
+      for(let g=0;g<GIF_GLEV;g++)
+        for(let b=0;b<GIF_BLEV;b++){
+          pal[i*3]   = Math.round(r*255/(GIF_RLEV-1));
+          pal[i*3+1] = Math.round(g*255/(GIF_GLEV-1));
+          pal[i*3+2] = Math.round(b*255/(GIF_BLEV-1));
+          i++;
+        }
+    return pal;
+  }
+  function gifQuantizeIndex(r,g,b){
+    const rq = Math.round(r/255*(GIF_RLEV-1));
+    const gq = Math.round(g/255*(GIF_GLEV-1));
+    const bq = Math.round(b/255*(GIF_BLEV-1));
+    return rq*GIF_GLEV*GIF_BLEV + gq*GIF_BLEV + bq;
+  }
+  function gifLzwEncode(indices, minCodeSize){
+    const clearCode = 1 << minCodeSize;
+    const eoiCode = clearCode + 1;
+    let curCodeSize = minCodeSize + 1;
+    let nextCode = eoiCode + 1;
+    const MAX_CODE = 4096;
+    let dict = new Map();
+    const out = [];
+    let curBits = 0, curBitCount = 0;
+    function emit(code){
+      curBits |= code << curBitCount;
+      curBitCount += curCodeSize;
+      while(curBitCount >= 8){ out.push(curBits & 0xFF); curBits >>>= 8; curBitCount -= 8; }
+    }
+    function resetDict(){ dict = new Map(); nextCode = eoiCode+1; curCodeSize = minCodeSize+1; }
+    emit(clearCode);
+    let prev = indices[0];
+    for(let i = 1; i < indices.length; i++){
+      const k = indices[i];
+      const key = prev*256 + k;
+      if(dict.has(key)){
+        prev = dict.get(key);
+      } else {
+        emit(prev);
+        // Увеличение битности кода "отстаёт" на один код от роста словаря —
+        // именно так работают настоящие GIF-декодеры (см. комментарий выше).
+        if(nextCode === (1<<curCodeSize) && curCodeSize < 12) curCodeSize++;
+        dict.set(key, nextCode); nextCode++;
+        if(nextCode >= MAX_CODE){ emit(clearCode); resetDict(); }
+        prev = k;
+      }
+    }
+    emit(prev);
+    emit(eoiCode);
+    if(curBitCount > 0) out.push(curBits & 0xFF);
+    return out;
+  }
+  function encodeGIF(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const pal = buildGifPalette();
+    const indices = new Uint8Array(w*h);
+    for(let i = 0, p = 0; i < data.length; i += 4, p++){
+      indices[p] = gifQuantizeIndex(data[i], data[i+1], data[i+2]);
+    }
+    const parts = [];
+    parts.push(new TextEncoder().encode('GIF89a'));
+    const lsd = new Uint8Array(7);
+    new DataView(lsd.buffer).setUint16(0, w, true);
+    new DataView(lsd.buffer).setUint16(2, h, true);
+    lsd[4] = 0xF0 | 0x07;
+    parts.push(lsd);
+    parts.push(pal);
+    const id = new Uint8Array(10);
+    id[0] = 0x2C;
+    new DataView(id.buffer).setUint16(5, w, true);
+    new DataView(id.buffer).setUint16(7, h, true);
+    parts.push(id);
+    const minCodeSize = 8;
+    parts.push(new Uint8Array([minCodeSize]));
+    const lzwBytes = gifLzwEncode(Array.from(indices), minCodeSize);
+    let i = 0;
+    while(i < lzwBytes.length){
+      const len = Math.min(255, lzwBytes.length - i);
+      parts.push(new Uint8Array([len]));
+      parts.push(new Uint8Array(lzwBytes.slice(i, i+len)));
+      i += len;
+    }
+    parts.push(new Uint8Array([0]));
+    parts.push(new Uint8Array([0x3B]));
+    return new Blob(parts, { type: 'image/gif' });
+  }
+
+  // ---------- ICO / CUR (32-битный DIB с альфа-каналом — самый совместимый вариант) ----------
+  function encodeIcoOrCur(canvas, isCursor){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const dibHeaderSize = 40;
+    const xorSize = w*h*4;
+    const andRowBytes = Math.ceil(w/32)*4;
+    const andSize = andRowBytes*h;
+    const imageSize = dibHeaderSize + xorSize + andSize;
+    const headerSize = 6, dirEntrySize = 16;
+    const buf = new ArrayBuffer(headerSize + dirEntrySize + imageSize);
+    const view = new DataView(buf);
+    const out = new Uint8Array(buf);
+
+    view.setUint16(0, 0, true);
+    view.setUint16(2, isCursor ? 2 : 1, true);
+    view.setUint16(4, 1, true);
+
+    let o = 6;
+    out[o++] = w >= 256 ? 0 : w;
+    out[o++] = h >= 256 ? 0 : h;
+    out[o++] = 0; out[o++] = 0;
+    if(isCursor){
+      view.setUint16(o, Math.round(w/2), true); o += 2; // hotspot по центру
+      view.setUint16(o, Math.round(h/2), true); o += 2;
+    } else {
+      view.setUint16(o, 1, true); o += 2;
+      view.setUint16(o, 32, true); o += 2;
+    }
+    view.setUint32(o, imageSize, true); o += 4;
+    view.setUint32(o, headerSize + dirEntrySize, true); o += 4;
+
+    let p = headerSize + dirEntrySize;
+    view.setUint32(p, 40, true);
+    view.setInt32(p+4, w, true);
+    view.setInt32(p+8, h*2, true);
+    view.setUint16(p+12, 1, true);
+    view.setUint16(p+14, 32, true);
+    view.setUint32(p+16, 0, true);
+    view.setUint32(p+20, xorSize, true);
+    p += 40;
+
+    for(let y = h-1; y >= 0; y--){
+      for(let x = 0; x < w; x++){
+        const i = (y*w+x)*4;
+        out[p++] = data[i+2]; out[p++] = data[i+1]; out[p++] = data[i]; out[p++] = data[i+3];
+      }
+    }
+    // AND-маска остаётся нулевой — прозрачность полностью определяется альфа-каналом
+    return new Blob([buf], { type: isCursor ? 'image/x-cursor' : 'image/x-icon' });
+  }
+
+  // ---------- PNM (Portable AnyMap, цветной вариант — идентичен PPM P6) ----------
+  function encodePNM(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`P6\n${w} ${h}\n255\n`);
+    const pixels = new Uint8Array(w * h * 3);
+    let p = 0;
+    for(let i = 0; i < data.length; i += 4){
+      pixels[p++] = data[i]; pixels[p++] = data[i+1]; pixels[p++] = data[i+2];
+    }
+    return new Blob([header, pixels], { type: 'image/x-portable-anymap' });
+  }
+
+  // ---------- PAM (Portable Arbitrary Map, RGBA — с сохранением альфа-канала) ----------
+  function encodePAM(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`P7\nWIDTH ${w}\nHEIGHT ${h}\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n`);
+    return new Blob([header, data], { type: 'image/x-portable-arbitrarymap' });
+  }
+
+  // ---------- MTV (MTV Raytracer image) ----------
+  function encodeMTV(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`${w} ${h}\n`);
+    const pixels = new Uint8Array(w * h * 3);
+    let p = 0;
+    for(let i = 0; i < data.length; i += 4){
+      pixels[p++] = data[i]; pixels[p++] = data[i+1]; pixels[p++] = data[i+2];
+    }
+    return new Blob([header, pixels], { type: 'image/x-mtv' });
+  }
+
+  // ---------- RGBA (сырой поканальный дамп, без заголовка) ----------
+  function encodeRGBAraw(canvas){
+    const data = getRGBAData(canvas);
+    return new Blob([data], { type: 'image/x-rgba' });
+  }
+
+  // ---------- RAS / SUN (Sun Rasterfile, 32-бит ARGB, тип RT_FORMAT_RGB) ----------
+  function encodeRAS(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new ArrayBuffer(32);
+    const hv = new DataView(header);
+    hv.setUint32(0, 0x59a66a95, false);
+    hv.setUint32(4, w, false);
+    hv.setUint32(8, h, false);
+    hv.setUint32(12, 32, false);
+    hv.setUint32(16, w*h*4, false);
+    hv.setUint32(20, 3, false); // RT_FORMAT_RGB
+    hv.setUint32(24, 0, false);
+    hv.setUint32(28, 0, false);
+    const pixels = new Uint8Array(w*h*4);
+    let p = 0;
+    for(let i = 0; i < data.length; i += 4){
+      pixels[p++] = data[i+3]; pixels[p++] = data[i]; pixels[p++] = data[i+1]; pixels[p++] = data[i+2];
+    }
+    return new Blob([header, pixels], { type: 'image/x-sun-raster' });
+  }
+
+  // ---------- PFM (Portable Float Map, big-endian, строки снизу вверх) ----------
+  function encodePFM(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = new TextEncoder().encode(`PF\n${w} ${h}\n1.0\n`);
+    const body = new ArrayBuffer(w*h*3*4);
+    const bv = new DataView(body);
+    let p = 0;
+    for(let y = h-1; y >= 0; y--){
+      for(let x = 0; x < w; x++){
+        const i = (y*w+x)*4;
+        bv.setFloat32(p, data[i]/255, false); p += 4;
+        bv.setFloat32(p, data[i+1]/255, false); p += 4;
+        bv.setFloat32(p, data[i+2]/255, false); p += 4;
+      }
+    }
+    return new Blob([header, body], { type: 'image/x-portable-floatmap' });
+  }
+
+  // ---------- XBM (X Bitmap, монохромный, бит — младший первым в байте) ----------
+  function encodeXBM(canvas, name){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const rowBytes = Math.ceil(w / 8);
+    const bytes = new Uint8Array(rowBytes * h);
+    for(let y = 0; y < h; y++){
+      for(let x = 0; x < w; x++){
+        const i = (y*w+x)*4;
+        const lum = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+        if(lum < 128) bytes[y*rowBytes + (x>>3)] |= (1 << (x & 7));
+      }
+    }
+    let s = `#define ${name}_width ${w}\n#define ${name}_height ${h}\nstatic char ${name}_bits[] = {\n  `;
+    const hexvals = [];
+    for(let i = 0; i < bytes.length; i++) hexvals.push('0x' + bytes[i].toString(16).toUpperCase().padStart(2,'0'));
+    s += hexvals.join(', ') + ' };\n';
+    return new Blob([s], { type: 'image/x-xbitmap' });
+  }
+
+  // ---------- XPM / PICON (X Pixmap, текстовый формат с таблицей цветов) ----------
+  // Без ограничения на число цветов файл на фото с плавным градиентом может
+  // получиться большим и не мгновенно собраться — поэтому для очень больших
+  // изображений просим уменьшить размер, чтобы не подвешивать вкладку.
+  const XPM_MAX_PIXELS = 500000;
+  const XPM_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,;:!?-+=';
+  function xpmSymbol(idx, cpp){
+    let s = '', n = idx;
+    for(let k = 0; k < cpp; k++){ s = XPM_CHARS[n % XPM_CHARS.length] + s; n = Math.floor(n / XPM_CHARS.length); }
+    return s;
+  }
+  function encodeXPM(canvas, name){
+    const w = canvas.width, h = canvas.height;
+    if(w*h > XPM_MAX_PIXELS) throw new Error('Изображение слишком большое для XPM/PICON (формат без сжатия цветов) — попробуйте уменьшить размер');
+    const data = getRGBAData(canvas);
+    const keyOf = i => data[i]+','+data[i+1]+','+data[i+2]+','+data[i+3];
+    const colorMap = new Map();
+    for(let i = 0; i < data.length; i += 4){
+      const key = keyOf(i);
+      if(!colorMap.has(key)) colorMap.set(key, colorMap.size);
+    }
+    const nColors = colorMap.size;
+    let cpp = 1;
+    while(Math.pow(XPM_CHARS.length, cpp) < nColors) cpp++;
+    const symbols = new Map();
+    let idx = 0;
+    for(const key of colorMap.keys()){ symbols.set(key, xpmSymbol(idx, cpp)); idx++; }
+
+    let out = `/* XPM */\nstatic char *${name}[] = {\n"${w} ${h} ${nColors} ${cpp}",\n`;
+    for(const key of colorMap.keys()){
+      const [r,g,b,a] = key.split(',').map(Number);
+      const sym = symbols.get(key);
+      out += a < 128 ? `"${sym} c None",\n` : `"${sym} c #${[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')}",\n`;
+    }
+    for(let y = 0; y < h; y++){
+      let line = '';
+      for(let x = 0; x < w; x++) line += symbols.get(keyOf((y*w+x)*4));
+      out += `"${line}${y === h-1 ? '"\n};\n' : '",\n'}`;
+    }
+    return new Blob([out], { type: 'image/x-xpixmap' });
+  }
+
+  // ---------- Base64 (чанками — иначе String.fromCharCode.apply падает по
+  // переполнению стека на больших изображениях) ----------
+  function bytesToBase64(bytes){
+    let binary = '';
+    const chunk = 0x8000;
+    for(let i = 0; i < bytes.length; i += chunk){
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  // ---------- SVG (не трассировка контуров — честная упаковка PNG-растра
+  // внутрь <image>; валидный SVG, открывается везде, см. рассуждение выше) ----------
+  async function encodeSVGFile(canvas){
+    const w = canvas.width, h = canvas.height;
+    const pngBlob = await canvasToBlob(canvas, 'image/png');
+    const bytes = new Uint8Array(await pngBlob.arrayBuffer());
+    const base64 = bytesToBase64(bytes);
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>\n`
+      + `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n`
+      + `<image width="${w}" height="${h}" href="data:image/png;base64,${base64}"/>\n`
+      + `</svg>\n`;
+    return new Blob([svg], { type: 'image/svg+xml' });
+  }
+
+  // ---------- EPS / PS (PostScript-обёртка, растр — через оператор image /
+  // colorimage с ASCIIHex-кодированием). Без потерь, round-trip
+  // провалидирован через Ghostscript/ImageMagick (MAE=0, пиксель в пиксель).
+  const PS_HEX = '0123456789ABCDEF';
+  function psHexBody(data){
+    let out = '', lineLen = 0;
+    for(let i = 0; i < data.length; i += 4){
+      out += PS_HEX[data[i] >> 4] + PS_HEX[data[i] & 15];
+      out += PS_HEX[data[i+1] >> 4] + PS_HEX[data[i+1] & 15];
+      out += PS_HEX[data[i+2] >> 4] + PS_HEX[data[i+2] & 15];
+      lineLen += 6;
+      if(lineLen >= 72){ out += '\n'; lineLen = 0; }
+    }
+    out += '>\n'; // конец ASCIIHexDecode
+    return out;
+  }
+  function encodePostScriptFile(canvas, isEPS){
+    const w = canvas.width, h = canvas.height;
+    const data = getRGBAData(canvas);
+    const header = isEPS
+      ? `%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 ${w} ${h}\n%%HiResBoundingBox: 0 0 ${w} ${h}\n`
+        + `%%Creator: ConvertHub\n%%LanguageLevel: 2\n%%Pages: 1\n%%EndComments\n`
+      : `%!PS-Adobe-3.0\n%%Creator: ConvertHub\n%%LanguageLevel: 2\n%%Pages: 1\n%%EndComments\n`
+        + `%%Page: 1 1\n<< /PageSize [${w} ${h}] >> setpagedevice\n`;
+    const body = `gsave\n${w} ${h} scale\n`
+      + `${w} ${h} 8 [${w} 0 0 -${h} 0 ${h}] currentfile /ASCIIHexDecode filter false 3 colorimage\n`
+      + psHexBody(data);
+    const footer = `grestore\n${isEPS ? '' : 'showpage\n'}%%EOF\n`;
+    return new Blob([header, body, footer], { type: 'application/postscript' });
+  }
+
+  // ---------- AI (с версии 9 .ai — это PDF; минимальный однострочный PDF
+  // 1.4 с нашим же JPEG внутри через XObject/DCTDecode — открывается в
+  // Illustrator и большинстве PDF/AI-вьюеров) ----------
+  async function encodeAIFile(canvas){
+    const w = canvas.width, h = canvas.height;
+    const jpegBlob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+    const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+    const enc = new TextEncoder();
+    const parts = [];
+    const offsets = [0];
+    let pos = 0;
+    function add(bytes){ parts.push(bytes); pos += bytes.length; }
+
+    add(new Uint8Array([...enc.encode('%PDF-1.4\n%'), 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+
+    offsets[1] = pos;
+    add(enc.encode('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'));
+
+    offsets[2] = pos;
+    add(enc.encode('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n'));
+
+    offsets[3] = pos;
+    add(enc.encode(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] `
+      + `/Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>\nendobj\n`));
+
+    offsets[4] = pos;
+    const content = `q ${w} 0 0 ${h} 0 0 cm /Im0 Do Q`;
+    add(enc.encode(`4 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`));
+
+    offsets[5] = pos;
+    add(enc.encode(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} `
+      + `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`));
+    add(jpegBytes);
+    add(enc.encode('\nendstream\nendobj\n'));
+
+    const xrefStart = pos;
+    let xref = 'xref\n0 6\n0000000000 65535 f \n';
+    for(let i = 1; i <= 5; i++) xref += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+    const trailer = `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+    add(enc.encode(xref + trailer));
+
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+
+  async function encodeCanvasToFormat(canvas, code){
+    switch(code){
+      case 'PNG':
+        return canvasToBlob(canvas, 'image/png');
+      case 'JPG': case 'JFIF': case 'JFI': case 'JPE': case 'JPEG': case 'JIF': case 'JPS':
+        return canvasToBlob(canvas, 'image/jpeg', 0.92);
+      case 'WEBP': {
+        const blob = await canvasToBlob(canvas, 'image/webp', 0.92);
+        if(!blob) throw new Error('WEBP не поддерживается в этом браузере');
+        return blob;
+      }
+      case 'BMP': return encodeBMP(canvas);
+      case 'TGA': return encodeTGA(canvas);
+      case 'PPM': return encodePPM(canvas);
+      case 'PGM': return encodePGM(canvas);
+      case 'PBM': return encodePBM(canvas);
+      case 'PNM': return encodePNM(canvas);
+      case 'PAM': return encodePAM(canvas);
+      case 'MTV': return encodeMTV(canvas);
+      case 'RGBA': return encodeRGBAraw(canvas);
+      case 'RAS': case 'SUN': return encodeRAS(canvas);
+      case 'PFM': return encodePFM(canvas);
+      case 'XBM': return encodeXBM(canvas, 'image');
+      case 'XPM': case 'PICON': return encodeXPM(canvas, 'image');
+      case 'WBMP': return encodeWBMP(canvas);
+      case 'RGB': case 'SGI': return encodeSGI(canvas);
+      case 'HDR': return encodeHDR(canvas);
+      case 'PSD': return encodePSD(canvas);
+      case 'TIFF': return encodeTIFF(canvas);
+      case 'GIF': return encodeGIF(canvas);
+      case 'ICO': return encodeIcoOrCur(canvas, false);
+      case 'CUR': return encodeIcoOrCur(canvas, true);
+      case 'SVG': return encodeSVGFile(canvas);
+      case 'EPS': return encodePostScriptFile(canvas, true);
+      case 'PS': return encodePostScriptFile(canvas, false);
+      case 'AI': return encodeAIFile(canvas);
+      default:
+        throw new Error('Этот формат пока не поддерживается');
+    }
+  }
+
+  // Форматы, которые браузер умеет показать напрямую в <img>. Для остальных
+  // (TGA/PPM/PGM/PBM/WBMP/SGI/HDR/PSD/TIFF/CUR) файл на диске полностью
+  // корректен, но для превью в интерфейсе рисуем PNG-снимок того же canvas —
+  // иначе браузер покажет "битую картинку", хотя сам файл рабочий.
+  const BROWSER_PREVIEWABLE = new Set(['PNG','JPG','JFIF','JPE','JPEG','JIF','JPS','WEBP','BMP','GIF','ICO','SVG']);
+
+
+  function handleFiles(fileList){
+    if(!targetFormat){
+      showToast('Сначала выберите формат, в который конвертировать');
+      const targetBtn = document.getElementById('targetBtn');
+      const targetDropdown = document.getElementById('targetDropdown');
+      closeAllDropdowns();
+      targetDropdown.classList.add('open');
+      targetBtn.classList.add('open');
+      return;
+    }
+
+    Array.from(fileList).forEach(file=>{
+      if(!isPaidNow() && getTodayCount() >= FREE_LIMIT){
+        updateUI();
+        return;
+      }
+
+      const frame = document.createElement('div');
+      frame.className='frame';
+      const idx = String(sheet.children.length+1).padStart(3,'0');
+      frame.innerHTML = `<div class="status working">Файл ${idx} — обработка…</div>`;
+      sheet.appendChild(frame);
+
+      heicToCanvas(file)
+        .then(async canvas=>{
+          const blob = await encodeCanvasToFormat(canvas, targetFormat);
+          const url = URL.createObjectURL(blob);
+          const ext = EXT_MAP[targetFormat] || targetFormat.toLowerCase();
+          const outName = file.name.replace(/\.(heic|heif)$/i, '') + '.' + ext;
+          const previewUrl = BROWSER_PREVIEWABLE.has(targetFormat)
+            ? url
+            : URL.createObjectURL(await canvasToBlob(canvas, 'image/png'));
+          frame.innerHTML = `
+            <img src="${previewUrl}" alt="${outName}">
+            <div class="status">Готово</div>
+            <a href="${url}" download="${outName}">скачать ${outName}</a>
+          `;
+          if(!isPaidNow()) incTodayCount();
+          updateUI();
+        })
+        .catch(err=>{
+          frame.innerHTML = `<div class="status" style="color:#f0554d">Ошибка: ${err && err.message ? err.message : 'не HEIC или повреждён'}</div>`;
+          console.error(err);
+        });
+    });
+  }
+
+</script>
+</body>
+</html>
