@@ -410,9 +410,7 @@
                 <button type="button" class="fmt-cat active" data-cat="image">Изображение <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
                 <button type="button" class="fmt-cat" data-cat="doc">Документ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
                 <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-                <button type="button" class="fmt-cat" data-cat="font">Шрифт <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
                 <button type="button" class="fmt-cat" data-cat="vector">Вектор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-                <button type="button" class="fmt-cat" data-cat="cad">CAD <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
               </div>
               <div class="fmt-grid" id="fmtGrid"></div>
             </div>
@@ -650,11 +648,9 @@
     image: IMAGE_FORMATS,
     doc: toFormats(['PDF','DOC','DOCX','XPS','DOCM','DOTX','ABW','AW','ODT','RTF','DOT','DOTM','DJVU','DBK','KWD','SXW','OXPS']),
     ebook: toFormats(['PDB','EPUB','FB2']),
-    font: toFormats(['PS']),
     vector: toFormats(['SVG','EPS','AI']),
-    cad: toFormats(['DXF']),
   };
-  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', font:'Шрифт', vector:'Вектор', cad:'CAD' };
+  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', vector:'Вектор' };
   let currentCategory = 'image';
 
   function showToast(msg){
@@ -708,20 +704,21 @@
   // Переключение раздела — сетка форматов справа перерисовывается под выбранный
   // раздел; реально доступен пока только "Изображение", остальные — превью
   // будущего списка форматов с тостом-напоминанием, что раздел скоро откроется.
+  function switchCategory(cat){
+    const key = cat.dataset.cat;
+    if(key === currentCategory) return;
+    currentCategory = key;
+    document.querySelectorAll('.fmt-cat').forEach(c=>c.classList.remove('active'));
+    cat.classList.add('active');
+    document.getElementById('fmtSearch').value = '';
+    renderFmtGrid('');
+    if(key !== 'image'){
+      showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
+    }
+  }
   document.querySelectorAll('.fmt-cat').forEach(cat=>{
-    cat.addEventListener('click', e=>{
-      e.stopPropagation();
-      const key = cat.dataset.cat;
-      if(key === currentCategory) return;
-      currentCategory = key;
-      document.querySelectorAll('.fmt-cat').forEach(c=>c.classList.remove('active'));
-      cat.classList.add('active');
-      document.getElementById('fmtSearch').value = '';
-      renderFmtGrid('');
-      if(key !== 'image'){
-        showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
-      }
-    });
+    cat.addEventListener('click', e=>{ e.stopPropagation(); switchCategory(cat); });
+    cat.addEventListener('mouseenter', ()=> switchCategory(cat));
   });
 
   // Источник — HEIC/HEIF, оба уже поддерживаются, чип просто обновляет подпись.

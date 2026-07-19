@@ -413,9 +413,7 @@
                 <button type="button" class="fmt-cat active" data-cat="image">Изображение <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
                 <button type="button" class="fmt-cat" data-cat="doc">Документ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
                 <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-                <button type="button" class="fmt-cat" data-cat="font">Шрифт <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
                 <button type="button" class="fmt-cat" data-cat="vector">Вектор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-                <button type="button" class="fmt-cat" data-cat="cad">CAD <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
               </div>
               <div class="fmt-grid" id="fmtGrid"></div>
             </div>
@@ -655,14 +653,12 @@
       {code:'EPUB', enabled:true}, {code:'FB2', enabled:true}, {code:'TXT', enabled:true},
       {code:'PDB', enabled:true},
     ],
-    font: toFormats(['PS']),
     vector: [
       {code:'SVG', enabled:true}, {code:'EPS', enabled:true},
       {code:'PS', enabled:true}, {code:'AI', enabled:true},
     ],
-    cad: toFormats(['DXF']),
   };
-  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', font:'Шрифт', vector:'Вектор', cad:'CAD' };
+  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', vector:'Вектор' };
   let currentCategory = 'image';
 
   function showToast(msg){
@@ -743,24 +739,27 @@
   // уносило со страницы. Теперь просто показываем список форматов книги, а
   // переход на /ru/ebook/ происходит только по клику на конкретный формат
   // (см. renderFmtGrid выше).
+  function switchCategory(cat){
+    const key = cat.dataset.cat;
+    if(key === currentCategory) return;
+    currentCategory = key;
+    document.querySelectorAll('.fmt-cat').forEach(c=>c.classList.remove('active'));
+    cat.classList.add('active');
+    document.getElementById('fmtSearch').value = '';
+    renderFmtGrid('');
+    // "Скоро появится" показываем только для разделов, где вообще нет ни
+    // одного рабочего формата — в "Векторе" теперь SVG/EPS/PS/AI реальные,
+    // в "Электронной книге" — EPUB/FB2/TXT/PDB (уводят на /ru/ebook/).
+    const hasWorkingFormat = (FORMATS[key] || []).some(f => f.enabled);
+    if(key !== 'image' && !hasWorkingFormat){
+      showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
+    }
+  }
   document.querySelectorAll('.fmt-cat').forEach(cat=>{
-    cat.addEventListener('click', e=>{
-      e.stopPropagation();
-      const key = cat.dataset.cat;
-      if(key === currentCategory) return;
-      currentCategory = key;
-      document.querySelectorAll('.fmt-cat').forEach(c=>c.classList.remove('active'));
-      cat.classList.add('active');
-      document.getElementById('fmtSearch').value = '';
-      renderFmtGrid('');
-      // "Скоро появится" показываем только для разделов, где вообще нет ни
-      // одного рабочего формата — в "Векторе" теперь SVG/EPS/PS/AI реальные,
-      // в "Электронной книге" — EPUB/FB2/TXT/PDB (уводят на /ru/ebook/).
-      const hasWorkingFormat = (FORMATS[key] || []).some(f => f.enabled);
-      if(key !== 'image' && !hasWorkingFormat){
-        showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
-      }
-    });
+    cat.addEventListener('click', e=>{ e.stopPropagation(); switchCategory(cat); });
+    // Наведение курсора переключает раздел так же, как раньше — клик всё
+    // ещё нужен на тач-устройствах, где mouseenter не срабатывает.
+    cat.addEventListener('mouseenter', ()=> switchCategory(cat));
   });
 
   // Источник — HEIC/HEIF, оба уже поддерживаются, чип просто обновляет подпись.
