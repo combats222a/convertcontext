@@ -2,12 +2,888 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=/ru/">
-<link rel="canonical" href="/ru/">
-<title>ConvertHub</title>
-<script>location.replace('/ru/');</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConvertHub — конвертер файлов онлайн в любой формат</title>
+<meta name="description" content="Конвертируйте изображения и другие файлы в любой формат прямо в браузере. Быстро, бесплатно, без загрузки на сервер.">
+<style>
+  :root{
+    --bg: #0f1117;
+    --bg-panel: #14161d;
+    --bg-elevated: #1a1d27;
+    --bg-input: #232734;
+    --border: #262a35;
+    --border-soft: rgba(255,255,255,0.06);
+    --text: #e8e9ed;
+    --text-dim: #8b8f9c;
+    --accent: #4f7fff;
+    --accent-dim: #3a5fd0;
+    --accent-glow: rgba(79,127,255,0.28);
+    --ok: #3ecf8e;
+    --err: #f0554d;
+    --header-h: 60px;
+    --sidebar-w: 248px;
+    --sidebar-w-collapsed: 72px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{ scroll-behavior:smooth; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    min-height:100vh;
+  }
+  a{ color:inherit; }
+
+  /* ===== Верхняя панель ===== */
+  header{
+    position:fixed; top:0; left:0; right:0; height:var(--header-h);
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 0 20px 0 14px; border-bottom:1px solid var(--border);
+    background: var(--bg-panel);
+    gap:14px; z-index:220;
+  }
+  .header-left{ display:flex; align-items:center; gap:10px; }
+
+  .menu-trigger-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px; flex-shrink:0;
+    background:none; border:1px solid transparent; border-radius:9px;
+    color: var(--text-dim); cursor:pointer; padding:0;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .menu-trigger-btn:hover{ background: var(--bg-input); color: var(--text); }
+  .menu-trigger-btn.active{ border-color: var(--accent); color: var(--accent); background: rgba(79,127,255,0.1); }
+  .menu-trigger-btn svg{ width:17px; height:17px; }
+
+  .brand{ display:flex; align-items:center; gap:9px; font-weight:700; font-size:15px; text-decoration:none; color: var(--text); padding:6px 6px 6px 2px; border-radius:8px; }
+  .brand:visited{ color: var(--text); }
+  .brand .logo{
+    width:26px; height:26px; border-radius:7px;
+    background: linear-gradient(135deg, var(--accent), #7aa0ff);
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+    flex-shrink:0;
+  }
+  .header-right{ display:flex; align-items:center; gap:10px; }
+  .theme-toggle-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:36px; height:36px; flex-shrink:0;
+    background:none; border:1px solid var(--border); border-radius:9px;
+    color: var(--text-dim); cursor:pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .theme-toggle-btn:hover{ border-color: var(--accent); color: var(--text); }
+  .theme-toggle-btn svg{ width:16px; height:16px; }
+  .header-cta{
+    font-size:13px; font-weight:600; padding:8px 15px; border-radius:9px;
+    border:1px solid var(--accent); background: var(--accent); color:#fff;
+    text-decoration:none; cursor:pointer; transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .header-cta:hover{ background: var(--accent-dim); border-color: var(--accent-dim); }
+
+  /* ===== Контент ===== */
+  main{
+    max-width: 900px; margin: 0; padding: 56px 40px 96px;
+    margin-left: var(--sidebar-w);
+    padding-top: calc(var(--header-h) + 56px);
+    text-align:left;
+    transition: margin-left 0.2s ease;
+  }
+  body.sidebar-collapsed main{ margin-left: var(--sidebar-w-collapsed); }
+
+  h1{ font-size: clamp(1.7rem, 3.2vw, 2.15rem); font-weight:700; margin-bottom:10px; letter-spacing:-0.01em; }
+  .sub{ color: var(--text-dim); font-size:14.5px; margin-bottom:34px; line-height:1.55; max-width:560px; }
+
+  /* ===== Виджет конвертации (шахматный фон) ===== */
+  .convert-widget{
+    position:relative;
+    border-radius: var(--radius-lg);
+    padding: 30px 30px 26px;
+    text-align:left;
+    background-color: var(--bg-elevated);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(79,127,255,0.16), transparent 55%),
+      radial-gradient(circle at 100% 100%, rgba(122,160,255,0.10), transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat, repeat;
+    border:1px solid var(--border);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 30px 80px -40px var(--accent-glow);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .convert-widget.drag{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 30px 80px -30px var(--accent-glow); }
+
+  .cw-stats{
+    position:relative;
+    margin: -30px -30px 22px;
+    padding: 16px 46px 16px 20px;
+    border-radius: 19px 19px 0 0;
+    background: rgba(255,255,255,0.035);
+    border-bottom: 1px solid var(--border);
+    text-align:center;
+    font-size:14px;
+    color: var(--text-dim);
+    line-height:1.5;
+  }
+  .cw-stats b{ color: var(--text); font-variant-numeric: tabular-nums; }
+  .cw-stats.hidden{ display:none; }
+  .cw-stats-close{
+    position:absolute; top:10px; right:12px;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    background:none; border:none; border-radius:7px;
+    color: var(--text-dim); cursor:pointer; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cw-stats-close:hover{ background: rgba(255,255,255,0.08); color: var(--text); }
+  .cw-stats-close svg{ width:16px; height:16px; }
+
+  .cw-choose-row{ display:flex; align-items:center; justify-content:center; gap:8px; }
+  .cw-choose-btn{
+    display:inline-flex; align-items:center; gap:10px;
+    background: var(--accent); color:#fff; border:none;
+    padding: 14px 26px; border-radius:9px; font-size:15px; font-weight:600;
+    cursor:pointer; transition: background 0.15s ease;
+  }
+  .cw-choose-btn:hover{ background: var(--accent-dim); }
+  .cw-choose-icon{ width:18px; height:18px; flex-shrink:0; }
+  .cw-cloud-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:9px; flex-shrink:0;
+    background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim); cursor:not-allowed; transition: color 0.15s ease;
+  }
+  .cw-cloud-btn svg{ width:18px; height:18px; }
+  .cw-cloud-btn:hover{ color: var(--text); }
+
+  .cw-formats-row{ display:flex; align-items:center; justify-content:center; gap:10px; margin-top:16px; }
+  .cw-arrow{ color: var(--text-dim); font-size:14px; }
+
+  .fmt-picker{ position:relative; }
+  .fmt-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    border:none; border-radius:9px; padding:12px 16px;
+    font-size:16px; font-weight:700; cursor:pointer;
+  }
+  .fmt-btn svg{ width:16px; height:16px; transition: transform 0.15s ease; flex-shrink:0; }
+  .fmt-btn.open svg{ transform: rotate(180deg); }
+  .fmt-btn.dark{ background:#0e0f13; color:#fff; border:1px solid var(--border); }
+  .fmt-btn.light{ background:#fff; color:#111; }
+
+  .fmt-dropdown{
+    display:none; position:absolute; top: calc(100% + 8px); left:0;
+    background: #17181d; border:1px solid var(--border); border-radius:12px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.5);
+    z-index:60; padding:14px;
+  }
+  .fmt-dropdown.open{ display:block; }
+
+  .fmt-dropdown-source{ min-width:150px; display:none; }
+  .fmt-dropdown-source.open{ display:flex; flex-direction:column; gap:2px; }
+  .fmt-dropdown-source .fmt-chip{
+    background:none; border:none; color:var(--text); text-align:left;
+    padding:9px 10px; border-radius:7px; cursor:pointer; font-size:14px; font-weight:500;
+  }
+  .fmt-dropdown-source .fmt-chip:hover{ background: var(--bg-input); }
+
+  .fmt-dropdown-target{ width:420px; max-width:86vw; right:0; left:auto; }
+
+  .fmt-search{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+    margin-bottom:12px;
+  }
+  .fmt-search svg{ width:16px; height:16px; color: var(--text-dim); flex-shrink:0; }
+  .fmt-search input{
+    background:none; border:none; outline:none; color:var(--text); font-size:14px; width:100%;
+  }
+
+  .fmt-body{ display:flex; gap:14px; }
+  .fmt-categories{
+    display:flex; flex-direction:column; gap:2px; min-width:150px;
+    border-right:1px solid var(--border); padding-right:12px;
+    max-height:280px; overflow-y:auto;
+  }
+  .fmt-cat{
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background:none; border:none; color: var(--text-dim); text-align:left;
+    padding:8px 8px; border-radius:7px; font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .fmt-cat svg{ width:14px; height:14px; flex-shrink:0; opacity:0; }
+  .fmt-cat:hover{ background: var(--bg-input); }
+  .fmt-cat.active{ color:#fff; background: rgba(255,255,255,0.05); }
+  .fmt-cat.active svg{ opacity:1; }
+
+  .fmt-grid{
+    flex:1; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;
+    max-height:280px; overflow-y:auto; padding-right:4px; align-content:start;
+  }
+  .fmt-chip{
+    background: var(--bg-input); border:1px solid var(--border); color: var(--text);
+    padding:9px 4px; border-radius:7px; font-size:12px; font-weight:600;
+    cursor:pointer; text-align:center; transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .fmt-chip:hover{ border-color: var(--accent); }
+  .fmt-chip.active{ background: var(--accent); border-color: var(--accent); color:#fff; }
+  .fmt-chip.disabled{ opacity:0.4; cursor:not-allowed; }
+  .fmt-chip.disabled:hover{ border-color: var(--border); }
+  .fmt-empty{ grid-column: 1 / -1; color: var(--text-dim); font-size:13px; padding:20px 0; text-align:center; }
+
+  @media (max-width:480px){
+    .fmt-dropdown-target{ width:92vw; left:0; right:auto; }
+    .fmt-body{ flex-direction:column; }
+    .fmt-categories{
+      flex-direction:row; overflow-x:auto; border-right:none;
+      border-bottom:1px solid var(--border); padding-right:0; padding-bottom:8px;
+      min-width:0; max-height:none;
+    }
+    .fmt-grid{ max-height:220px; }
+  }
+
+  .cw-hint{ font-size:13px; color: var(--text-dim); margin-top:18px; text-align:center; }
+  .cw-hint a{ color: var(--accent); text-decoration:underline; cursor:pointer; }
+
+  .cw-toast{
+    position:fixed; left:50%; bottom:24px; transform: translate(-50%, 12px);
+    background:#1c1f28; border:1px solid var(--border); color:var(--text);
+    padding:10px 18px; border-radius:9px; font-size:13px;
+    opacity:0; pointer-events:none; transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index:500; box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    max-width:86vw; text-align:center;
+  }
+  .cw-toast.show{ opacity:1; transform: translate(-50%, 0); }
+
+  /* ===== Второй уровень контента ===== */
+  .divider{ height:1px; background: var(--border-soft); margin:44px 0; border:none; }
+  .section-title{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color: var(--text-dim); margin-bottom:16px; display:flex; align-items:center; gap:6px; }
+
+  .popular-formats{ display:flex; flex-wrap:wrap; gap:10px; }
+  .pf-chip{
+    display:flex; align-items:center; gap:9px;
+    background: var(--bg-elevated); border:1px solid var(--border);
+    padding:10px 14px; border-radius:12px; cursor:pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .pf-chip:hover{ transform: translateY(-2px); border-color: var(--accent); background: var(--bg-input); }
+  .pf-icon{
+    width:26px; height:26px; border-radius:7px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:9px; font-weight:800; color:#fff;
+  }
+  .pf-chip .pf-name{ font-size:13.5px; font-weight:600; }
+  .pf-chip .pf-sub{ font-size:11px; color: var(--text-dim); }
+
+  .why-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
+  .why-card{
+    background: var(--bg-elevated); border:1px solid var(--border); border-radius: var(--radius-md);
+    padding:20px; transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .why-card:hover{ border-color: var(--border); transform: translateY(-2px); }
+  .why-icon{
+    width:34px; height:34px; border-radius:9px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .why-card h3{ font-size:14.5px; font-weight:700; margin-bottom:6px; }
+  .why-card p{ font-size:13px; color: var(--text-dim); line-height:1.5; }
+
+  .recent-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .recent-header a{ font-size:12.5px; color: var(--accent); text-decoration:none; font-weight:600; }
+  .recent-list{ display:flex; flex-direction:column; gap:2px; }
+  .recent-row{
+    display:grid; grid-template-columns: 1fr auto 1fr auto; align-items:center; gap:14px;
+    padding:12px 10px; border-radius:10px;
+    transition: background 0.15s ease;
+  }
+  .recent-row:hover{ background: var(--bg-elevated); }
+  .recent-file{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .recent-file-icon{
+    width:32px; height:32px; border-radius:8px; flex-shrink:0;
+    background: var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:13px;
+  }
+  .recent-file-name{ font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .recent-file-meta{ font-size:11.5px; color: var(--text-dim); }
+  .recent-arrow{ color: var(--text-dim); }
+  .recent-badge{
+    font-size:11px; font-weight:700; padding:4px 9px; border-radius:6px; width:fit-content;
+  }
+  .recent-time{ font-size:12px; color: var(--text-dim); text-align:right; }
+
+  footer{
+    border-top:1px solid var(--border);
+    padding: 22px 40px 22px calc(var(--sidebar-w) + 40px); text-align:left;
+    font-size:12px; color: var(--text-dim);
+    transition: padding-left 0.2s ease;
+  }
+  body.sidebar-collapsed footer{ padding-left: calc(var(--sidebar-w-collapsed) + 40px); }
+
+  /* ===== Боковой сайдбар (персистентный, сворачиваемый) ===== */
+  .sidebar-overlay{
+    position:fixed; inset: var(--header-h) 0 0 0;
+    background: rgba(0,0,0,0.4);
+    opacity:0; pointer-events:none;
+    transition: opacity 0.2s ease;
+    z-index:150;
+    display:none;
+  }
+  .sidebar-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .sidebar{
+    position:fixed; top: var(--header-h); left:0; bottom:0;
+    width: var(--sidebar-w);
+    background: var(--bg-panel);
+    border-right:1px solid var(--border);
+    transition: width 0.2s ease;
+    z-index:200;
+    overflow-y:auto; overflow-x:hidden;
+    padding: 16px 12px;
+    text-align:left;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  body.sidebar-collapsed .sidebar{ width: var(--sidebar-w-collapsed); padding:16px 11px; }
+
+  .sidebar-section{ margin-bottom:18px; }
+  body.sidebar-collapsed .sidebar-section{ margin-bottom:10px; }
+  .sidebar-title{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color: var(--text-dim); padding: 0 10px 8px;
+    white-space:nowrap; overflow:hidden;
+  }
+  body.sidebar-collapsed .sidebar-title{ opacity:0; height:0; padding:0; margin:0; }
+
+  .sidebar-link{
+    display:flex; align-items:center; gap:11px;
+    width:100%; background:none; border:none; color: var(--text-dim);
+    font-size:13.5px; font-weight:500; text-align:left; padding:9px 10px; border-radius:9px;
+    cursor:pointer; transition: background 0.15s ease, color 0.15s ease; text-decoration:none;
+    white-space:nowrap; overflow:hidden;
+  }
+  .sidebar-link .sl-icon{ width:18px; flex-shrink:0; text-align:center; font-size:15px; }
+  .sidebar-link .sl-label{ overflow:hidden; text-overflow:ellipsis; }
+  body.sidebar-collapsed .sidebar-link{ justify-content:center; padding:9px 0; }
+  body.sidebar-collapsed .sidebar-link .sl-label{ display:none; }
+  .sidebar-link:hover{ background: var(--bg-input); color: var(--text); }
+  .sidebar-link.active{ color: var(--accent); background: rgba(79,127,255,0.12); }
+
+  @media (max-width: 900px){
+    header{ padding-left:14px; }
+    .sidebar{ transform: translateX(-100%); width:260px !important; padding:18px 14px !important; box-shadow: 8px 0 28px rgba(0,0,0,0.45); }
+    .sidebar.open{ transform: translateX(0); }
+    body.sidebar-collapsed .sidebar-title{ opacity:1; height:auto; padding:0 10px 8px; }
+    body.sidebar-collapsed .sidebar-link{ justify-content:flex-start; padding:9px 10px; }
+    body.sidebar-collapsed .sidebar-link .sl-label{ display:inline; }
+    main, body.sidebar-collapsed main{ margin-left:0 !important; padding-left:20px; padding-right:20px; }
+    footer, body.sidebar-collapsed footer{ padding-left:20px; }
+    .sidebar-overlay{ display:block; }
+    .why-grid{ grid-template-columns:1fr; }
+    .recent-row{ grid-template-columns: 1fr auto; grid-template-rows:auto auto; row-gap:6px; }
+    .recent-arrow, .recent-time{ display:none; }
+  }
+</style>
 </head>
 <body>
-<p>Переход на <a href="/ru/">/ru/</a>…</p>
+<header id="siteHeader">
+  <div class="header-left">
+    <button class="menu-trigger-btn" id="menuTriggerBtn" aria-label="Свернуть/развернуть меню" aria-expanded="true">
+      <svg id="menuTriggerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"></line>
+        <line x1="4" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="18" x2="20" y2="18"></line>
+      </svg>
+    </button>
+    <a class="brand" href="/ru/"><span class="logo">C</span> ConvertHub</a>
+  </div>
+  <div class="header-right">
+    <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Сменить тему" data-toast="Светлая тема скоро появится">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="header-cta" id="registerBtn" href="#">Регистрация</a>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar" aria-hidden="false">
+  <div class="sidebar-section">
+    <div class="sidebar-title">Главная</div>
+    <button class="sidebar-link active" data-action="scroll-top"><span class="sl-icon">🏠</span><span class="sl-label">Конвертер файлов</span></button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Конвертация</div>
+    <a class="sidebar-link" href="/ru/heic/"><span class="sl-icon">📷</span><span class="sl-label">HEIC → в любой формат</span></a>
+    <a class="sidebar-link" href="/ru/ebook/"><span class="sl-icon">📚</span><span class="sl-label">Книги → в любой формат</span></a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Аккаунт</div>
+    <button class="sidebar-link" data-action="toast" data-toast="Тарифы и подписка скоро появятся"><span class="sl-icon">💳</span><span class="sl-label">Тарифы и подписка</span></button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Информация</div>
+    <button class="sidebar-link" data-action="toast" data-toast="Скоро появится"><span class="sl-icon">🔒</span><span class="sl-label">Конфиденциальность</span></button>
+    <button class="sidebar-link" data-action="toast" data-toast="Скоро появится"><span class="sl-icon">✉️</span><span class="sl-label">Поддержка</span></button>
+  </div>
+</aside>
+
+<main>
+  <h1>Конвертер файлов</h1>
+  <p class="sub">Сконвертируйте ваши файлы в любой формат прямо в браузере — без загрузки на сервер.</p>
+
+  <div class="convert-widget" id="dropzone">
+    <input type="file" id="fileInput" multiple style="display:none">
+
+    <div class="cw-stats hidden" id="cwStats">
+      <button type="button" class="cw-stats-close" id="cwStatsClose" aria-label="Скрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      Мы преобразовали <b id="cwStatsFiles">3 309 088</b> файлов общим размером <b id="cwStatsSize">60 086</b> ГБ
+    </div>
+
+    <div class="cw-choose-row">
+      <button type="button" class="cw-choose-btn" id="chooseFilesBtn">
+        <svg class="cw-choose-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><circle cx="16" cy="14" r="2.4"/><path d="M20 17.6 22 20"/></svg>
+        Выберите файлы
+      </button>
+      <button type="button" class="cw-cloud-btn" title="Dropbox — скоро" data-toast="Загрузка из Dropbox скоро появится">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="m6 2 6 3.8L6 9.6 0 5.8 6 2Zm12 0 6 3.8-6 3.8-6-3.8L18 2ZM0 13.4l6-3.8 6 3.8-6 3.8-6-3.8Zm18-3.8 6 3.8-6 3.8-6-3.8 6-3.8ZM6 17.9l6-3.8 6 3.8-6 3.7-6-3.7Z"/></svg>
+      </button>
+      <button type="button" class="cw-cloud-btn" title="Google Drive — скоро" data-toast="Загрузка из Google Drive скоро появится">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.6 2h8.8l7.1 12.3-4.4 7.7H4.9L.5 14.3 7.6 2Zm1.1 2-5.4 9.4h10.8L8.7 4Zm2 10.4L6.3 22h11.4l-2.1-3.7-4.9-3.9Zm7.3-1L13.9 22h5.6l3-5.3-3.5-5.3ZM8.1 4l4.4 7.6h5.4L13.5 4H8.1Z"/></svg>
+      </button>
+    </div>
+
+    <div class="cw-formats-row">
+      <div class="fmt-picker" id="sourcePicker">
+        <button type="button" class="fmt-btn dark" id="sourceBtn">
+          <span id="sourceBtnLabel">HEIC</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="fmt-dropdown fmt-dropdown-source" id="sourceDropdown">
+          <button type="button" class="fmt-chip">HEIC</button>
+          <button type="button" class="fmt-chip">HEIF</button>
+        </div>
+      </div>
+
+      <span class="cw-arrow">в</span>
+
+      <div class="fmt-picker" id="targetPicker">
+        <button type="button" class="fmt-btn light" id="targetBtn">
+          <span id="targetBtnLabel">Выберите формат</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="fmt-dropdown fmt-dropdown-target" id="targetDropdown">
+          <div class="fmt-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="fmtSearch" placeholder="Поиск">
+          </div>
+          <div class="fmt-body">
+            <div class="fmt-categories" id="fmtCategories">
+              <button type="button" class="fmt-cat active" data-cat="image">Изображение <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button type="button" class="fmt-cat" data-cat="doc">Документ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+              <button type="button" class="fmt-cat" data-cat="vector">Вектор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+            </div>
+            <div class="fmt-grid" id="fmtGrid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cw-hint">Перетащите файлы сюда · 1 GB максимальный размер файла или <a id="registerLink">Регистрация</a></div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-title">★ Популярные форматы</div>
+  <div class="popular-formats" id="popularFormats">
+    <div class="pf-chip" data-code="JPG"><span class="pf-icon" style="background:#3ecf8e">JPG</span><div><div class="pf-name">JPG</div><div class="pf-sub">Изображение</div></div></div>
+    <div class="pf-chip" data-code="PNG"><span class="pf-icon" style="background:#4f7fff">PNG</span><div><div class="pf-name">PNG</div><div class="pf-sub">Изображение</div></div></div>
+    <div class="pf-chip" data-code="WEBP"><span class="pf-icon" style="background:#a86bff">WEBP</span><div><div class="pf-name">WEBP</div><div class="pf-sub">Изображение</div></div></div>
+    <div class="pf-chip" data-code="AVIF"><span class="pf-icon" style="background:#f0554d">AVIF</span><div><div class="pf-name">AVIF</div><div class="pf-sub">Изображение</div></div></div>
+    <div class="pf-chip" data-code="PDF"><span class="pf-icon" style="background:#e0554d">PDF</span><div><div class="pf-name">PDF</div><div class="pf-sub">Документ</div></div></div>
+    <div class="pf-chip" data-code="TIFF"><span class="pf-icon" style="background:#e0a83a">TIFF</span><div><div class="pf-name">TIFF</div><div class="pf-sub">Изображение</div></div></div>
+    <div class="pf-chip" data-action="toast" data-toast="Полный список форматов — в выборе формата выше"><span class="pf-icon" style="background:#4b5062">•••</span><div><div class="pf-name">Ещё</div><div class="pf-sub">100+ форматов</div></div></div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-title">Почему ConvertHub</div>
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="why-icon" style="background:rgba(79,127,255,0.14); color:#7aa0ff">⚡</div>
+      <h3>Быстрая конвертация</h3>
+      <p>Мгновенная обработка файлов без ожидания в очереди.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-icon" style="background:rgba(62,207,142,0.14); color:#3ecf8e">🛡️</div>
+      <h3>Безопасность</h3>
+      <p>Файлы не загружаются на сервер и полностью защищены.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-icon" style="background:rgba(168,107,255,0.14); color:#c39bff">∞</div>
+      <h3>Любые форматы</h3>
+      <p>Конвертация в более чем 100 форматов файлов.</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="recent-header">
+    <div class="section-title" style="margin-bottom:0">🕘 Недавние конвертации</div>
+    <a href="#" data-action="toast" data-toast="История конвертаций скоро появится">Смотреть все</a>
+  </div>
+  <div class="recent-list">
+    <div class="recent-row">
+      <div class="recent-file">
+        <span class="recent-file-icon">📄</span>
+        <div>
+          <div class="recent-file-name">IMG_2024.HEIC</div>
+          <div class="recent-file-meta">HEIC · 2.4 MB</div>
+        </div>
+      </div>
+      <span class="recent-arrow">→</span>
+      <div class="recent-file">
+        <span class="recent-badge" style="background:rgba(62,207,142,0.15); color:#3ecf8e">JPG</span>
+        <div>
+          <div class="recent-file-name">IMG_2024.jpg</div>
+          <div class="recent-file-meta">1.8 MB</div>
+        </div>
+      </div>
+      <span class="recent-time">2 мин. назад</span>
+    </div>
+    <div class="recent-row">
+      <div class="recent-file">
+        <span class="recent-file-icon">📄</span>
+        <div>
+          <div class="recent-file-name">photo.heic</div>
+          <div class="recent-file-meta">HEIC · 1.7 MB</div>
+        </div>
+      </div>
+      <span class="recent-arrow">→</span>
+      <div class="recent-file">
+        <span class="recent-badge" style="background:rgba(79,127,255,0.15); color:#7aa0ff">PNG</span>
+        <div>
+          <div class="recent-file-name">photo.png</div>
+          <div class="recent-file-meta">3.1 MB</div>
+        </div>
+      </div>
+      <span class="recent-time">15 мин. назад</span>
+    </div>
+    <div class="recent-row">
+      <div class="recent-file">
+        <span class="recent-file-icon">📄</span>
+        <div>
+          <div class="recent-file-name">image.heic</div>
+          <div class="recent-file-meta">HEIC · 3.2 MB</div>
+        </div>
+      </div>
+      <span class="recent-arrow">→</span>
+      <div class="recent-file">
+        <span class="recent-badge" style="background:rgba(168,107,255,0.15); color:#c39bff">WEBP</span>
+        <div>
+          <div class="recent-file-name">image.webp</div>
+          <div class="recent-file-meta">2.1 MB</div>
+        </div>
+      </div>
+      <span class="recent-time">1 ч. назад</span>
+    </div>
+  </div>
+</main>
+
+<footer>ConvertHub — без сервера, без слежки, без очереди</footer>
+
+<script>
+  (function initSidebar(){
+    const header = document.getElementById('siteHeader');
+    const btn = document.getElementById('menuTriggerBtn');
+    const icon = document.getElementById('menuTriggerIcon');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function syncHeaderHeight(){
+      document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+    }
+    syncHeaderHeight();
+    if(typeof ResizeObserver !== 'undefined'){
+      new ResizeObserver(syncHeaderHeight).observe(header);
+    } else {
+      window.addEventListener('resize', syncHeaderHeight);
+    }
+
+    const isMobile = () => window.matchMedia('(max-width: 900px)').matches;
+
+    // Мобильный режим: оверлей открыт/закрыт
+    function setMobileOpen(open){
+      sidebar.classList.toggle('open', open);
+      overlay.classList.toggle('open', open);
+      btn.classList.toggle('active', open);
+      btn.setAttribute('aria-expanded', String(open));
+      sidebar.setAttribute('aria-hidden', String(!open));
+    }
+
+    // Десктоп: сворачивание в иконочную рейлу
+    function setCollapsed(collapsed){
+      document.body.classList.toggle('sidebar-collapsed', collapsed);
+      btn.setAttribute('aria-expanded', String(!collapsed));
+      localStorage.setItem('ch_sidebar_collapsed', collapsed ? '1' : '0');
+    }
+
+    if(localStorage.getItem('ch_sidebar_collapsed') === '1'){
+      setCollapsed(true);
+    }
+
+    btn.addEventListener('click', ()=>{
+      if(isMobile()){
+        setMobileOpen(!sidebar.classList.contains('open'));
+      } else {
+        setCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+      }
+    });
+    overlay.addEventListener('click', ()=> setMobileOpen(false));
+    document.addEventListener('keydown', e=>{ if(e.key === 'Escape') setMobileOpen(false); });
+
+    sidebar.querySelectorAll('.sidebar-link').forEach(link=>{
+      link.addEventListener('click', (e)=>{
+        const action = link.dataset.action;
+        if(action === 'scroll-top'){
+          document.getElementById('dropzone')?.scrollIntoView({behavior:'smooth', block:'center'});
+        } else if(action === 'toast'){
+          e.preventDefault();
+          showToast(link.dataset.toast || 'Скоро появится');
+        }
+        if(isMobile()) setMobileOpen(false);
+      });
+    });
+  })();
+
+  (function initStatsBar(){
+    const bar = document.getElementById('cwStats');
+    const closeBtn = document.getElementById('cwStatsClose');
+    if(localStorage.getItem('ch_stats_dismissed') === '1'){
+      bar.classList.add('hidden');
+    }
+    closeBtn.addEventListener('click', ()=>{
+      bar.classList.add('hidden');
+      localStorage.setItem('ch_stats_dismissed', '1');
+    });
+  })();
+
+  function showToast(msg){
+    let t = document.getElementById('cwToast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'cwToast';
+      t.className = 'cw-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(()=> t.classList.remove('show'), 2400);
+  }
+
+  document.querySelectorAll('.cw-cloud-btn').forEach(b=>{
+    b.addEventListener('click', ()=> showToast(b.dataset.toast || 'Скоро появится'));
+  });
+
+  document.getElementById('themeToggleBtn').addEventListener('click', e=>{
+    showToast(e.currentTarget.dataset.toast || 'Скоро появится');
+  });
+
+  document.getElementById('registerBtn').addEventListener('click', e=>{
+    e.preventDefault();
+    showToast('Регистрация скоро появится');
+  });
+  document.getElementById('registerLink').addEventListener('click', e=>{
+    e.preventDefault();
+    showToast('Регистрация скоро появится');
+  });
+
+  /* ===== Виджет выбора форматов (тот же список, что на /ru/heic/) =====
+     Здесь ничего не конвертирует — реальная конвертация и лимиты живут на
+     /ru/heic/, сюда пользователь просто выбирает формат, а дальше его
+     перенаправляет handleFiles(). */
+  let targetFormat = null;
+  let selectedTargetCode = null;
+
+  const IMAGE_FORMATS = [
+    {code:'JPG', enabled:true}, {code:'PNG', enabled:true}, {code:'JPEG', enabled:true},
+    {code:'WEBP', enabled:true}, {code:'TIFF', enabled:true}, {code:'GIF', enabled:true},
+    {code:'BMP', enabled:true}, {code:'PSD', enabled:true}, {code:'HDR', enabled:true},
+    {code:'JPE', enabled:true}, {code:'ICO', enabled:true}, {code:'JFIF', enabled:true},
+    {code:'RGB', enabled:true}, {code:'JPS', enabled:true}, {code:'CUR', enabled:true},
+    {code:'JIF', enabled:true}, {code:'WBMP', enabled:true}, {code:'PPM', enabled:true},
+    {code:'PGM', enabled:true}, {code:'TGA', enabled:true}, {code:'PBM', enabled:true},
+    {code:'MTV', enabled:true}, {code:'PAM', enabled:true}, {code:'PFM', enabled:true},
+    {code:'PICON', enabled:true}, {code:'PNM', enabled:true}, {code:'RAS', enabled:true},
+    {code:'RGBA', enabled:true}, {code:'SGI', enabled:true}, {code:'SUN', enabled:true},
+    {code:'XBM', enabled:true}, {code:'XPM', enabled:true}, {code:'JFI', enabled:true},
+  ];
+  function toFormats(codes){ return codes.map(code => ({code, enabled:false})); }
+  const FORMATS = {
+    image: IMAGE_FORMATS,
+    doc: toFormats(['PDF','DOC','DOCX','XPS','DOCM','DOTX','ABW','AW','ODT','RTF','DOT','DOTM','DJVU','DBK','KWD','SXW','OXPS']),
+    ebook: [
+      {code:'EPUB', enabled:true}, {code:'FB2', enabled:true}, {code:'TXT', enabled:true},
+      {code:'PDB', enabled:true},
+    ],
+    // SVG/EPS/PS/AI реально конвертируются на /ru/heic/ (см. рассуждение и
+    // энкодеры там) — здесь просто даём их выбрать, а handleFiles() ниже
+    // редиректит HEIC-файл на /ru/heic/?to=<код>.
+    vector: [
+      {code:'SVG', enabled:true}, {code:'EPS', enabled:true},
+      {code:'PS', enabled:true}, {code:'AI', enabled:true},
+    ],
+  };
+  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', vector:'Вектор' };
+  let currentCategory = 'image';
+
+  function selectTargetFormat(code){
+    selectedTargetCode = code;
+    targetFormat = code;
+    document.getElementById('targetBtnLabel').textContent = code;
+    renderFmtGrid(document.getElementById('fmtSearch').value);
+    closeAllDropdowns();
+  }
+
+  function renderFmtGrid(filter){
+    const grid = document.getElementById('fmtGrid');
+    const q = (filter || '').trim().toUpperCase();
+    const list = FORMATS[currentCategory] || [];
+    grid.innerHTML = '';
+    const matches = list.filter(f => !q || f.code.includes(q));
+    matches.forEach(f=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fmt-chip' + (f.enabled ? '' : ' disabled') + (f.code === selectedTargetCode ? ' active' : '');
+      btn.textContent = f.code;
+      if(f.enabled){
+        btn.addEventListener('click', ()=> selectTargetFormat(f.code));
+      } else {
+        btn.addEventListener('click', ()=> showToast(`${f.code} — конвертация скоро появится`));
+      }
+      grid.appendChild(btn);
+    });
+    if(!matches.length){
+      grid.innerHTML = '<div class="fmt-empty">Ничего не найдено</div>';
+    }
+  }
+  renderFmtGrid('');
+
+  document.getElementById('fmtSearch').addEventListener('input', e=> renderFmtGrid(e.target.value));
+
+  function switchCategory(cat){
+    const key = cat.dataset.cat;
+    if(key === currentCategory) return;
+    currentCategory = key;
+    document.querySelectorAll('.fmt-cat').forEach(c=>c.classList.remove('active'));
+    cat.classList.add('active');
+    document.getElementById('fmtSearch').value = '';
+    renderFmtGrid('');
+    const hasWorkingFormat = (FORMATS[key] || []).some(f => f.enabled);
+    if(key !== 'image' && key !== 'ebook' && !hasWorkingFormat){
+      showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
+    }
+  }
+  document.querySelectorAll('.fmt-cat').forEach(cat=>{
+    cat.addEventListener('click', e=>{ e.stopPropagation(); switchCategory(cat); });
+    cat.addEventListener('mouseenter', ()=> switchCategory(cat));
+  });
+
+  document.querySelectorAll('#sourceDropdown .fmt-chip').forEach(chip=>{
+    chip.addEventListener('click', e=>{
+      e.stopPropagation();
+      document.getElementById('sourceBtnLabel').textContent = chip.textContent;
+      closeAllDropdowns();
+    });
+  });
+
+  function closeAllDropdowns(){
+    document.querySelectorAll('.fmt-dropdown.open').forEach(d=>d.classList.remove('open'));
+    document.querySelectorAll('.fmt-btn.open').forEach(b=>b.classList.remove('open'));
+  }
+  function setupPicker(btnId, dropdownId){
+    const btn = document.getElementById(btnId);
+    const dropdown = document.getElementById(dropdownId);
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const wasOpen = dropdown.classList.contains('open');
+      closeAllDropdowns();
+      if(!wasOpen){
+        dropdown.classList.add('open');
+        btn.classList.add('open');
+      }
+    });
+    dropdown.addEventListener('click', e=> e.stopPropagation());
+  }
+  setupPicker('sourceBtn', 'sourceDropdown');
+  setupPicker('targetBtn', 'targetDropdown');
+  document.addEventListener('click', closeAllDropdowns);
+  document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeAllDropdowns(); });
+
+  document.querySelectorAll('#popularFormats .pf-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const code = chip.dataset.code;
+      if(code){
+        selectTargetFormat(code);
+        showToast(`Выбран формат ${code} — теперь выберите файл`);
+      } else if(chip.dataset.action === 'toast'){
+        showToast(chip.dataset.toast || 'Скоро появится');
+      }
+      document.getElementById('dropzone')?.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+
+  document.querySelectorAll('[data-action="toast"]').forEach(el=>{
+    if(el.closest('.sidebar') || el.closest('#popularFormats')) return; // уже подключены выше
+    el.addEventListener('click', e=>{
+      e.preventDefault();
+      showToast(el.dataset.toast || 'Скоро появится');
+    });
+  });
+
+  document.getElementById('chooseFilesBtn').addEventListener('click', ()=> fileInput.click());
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  ['dragenter','dragover'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.remove('drag'); });
+  });
+  dropzone.addEventListener('drop', e=> handleFiles(e.dataTransfer.files));
+  fileInput.addEventListener('change', e=> handleFiles(e.target.files));
+
+  /* Реально работает конвертация HEIC/HEIF → JPG/PNG и др. на /ru/heic/, а
+     также конвертация книг (TXT/MD/HTML/FB2/EPUB → EPUB/FB2/TXT/PDB) на
+     /ru/ebook/ (там же лимиты и сама конвертация — см. соответствующие
+     страницы). Отсюда, с главной, нужно сначала выбрать формат — если не
+     выбран, открываем дропдаун и просим выбрать; дальше перенаправляем на
+     нужную страницу с уже выбранным форматом в параметре; остальные форматы
+     — заглушка с тостом "скоро". */
+  const EBOOK_SOURCE_EXT = /\.(txt|md|markdown|html?|fb2|epub)$/i;
+  function handleFiles(fileList){
+    const file = fileList[0];
+    if(!file) return;
+
+    if(!targetFormat){
+      showToast('Сначала выберите формат, в который конвертировать');
+      const targetBtn = document.getElementById('targetBtn');
+      const targetDropdown = document.getElementById('targetDropdown');
+      closeAllDropdowns();
+      targetDropdown.classList.add('open');
+      targetBtn.classList.add('open');
+      return;
+    }
+
+    if(/\.(heic|heif)$/i.test(file.name)){
+      showToast('Обнаружен HEIC-файл — переходим к конвертации…');
+      setTimeout(()=>{ window.location.href = `/ru/heic/?to=${selectedTargetCode.toLowerCase()}`; }, 900);
+    } else if(currentCategory === 'ebook' && EBOOK_SOURCE_EXT.test(file.name)){
+      showToast('Переходим к конвертации книги…');
+      setTimeout(()=>{ window.location.href = `/ru/ebook/?to=${selectedTargetCode.toLowerCase()}`; }, 900);
+    } else {
+      const ext = (file.name.split('.').pop() || 'файл').toUpperCase();
+      showToast(`Конвертация формата ${ext} скоро появится — пока доступен HEIC → JPG/PNG`);
+    }
+  }
+</script>
 </body>
 </html>
