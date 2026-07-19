@@ -7,17 +7,20 @@
 <meta name="description" content="Конвертируйте изображения и другие файлы в любой формат прямо в браузере. Быстро, бесплатно, без загрузки на сервер.">
 <style>
   :root{
-    --bg: #0f1117;
-    --bg-panel: #14161d;
-    --bg-elevated: #1a1d27;
-    --bg-input: #232734;
-    --border: #262a35;
+    --bg: #0b0e18;
+    --bg-panel: #0b0e18;
+    --bg-elevated: #151c31;
+    --bg-input: #191d2a;
+    --border: #262a3d;
     --border-soft: rgba(255,255,255,0.06);
     --text: #e8e9ed;
     --text-dim: #8b8f9c;
-    --accent: #4f7fff;
-    --accent-dim: #3a5fd0;
-    --accent-glow: rgba(79,127,255,0.28);
+    --accent: #1f56dc;
+    --accent-dim: #2c5bce;
+    --accent-icon: #2c5bce;
+    --border-grad-1: #2c5bce;
+    --border-grad-2: #4b4391;
+    --accent-glow: rgba(31,86,220,0.28);
     --ok: #3ecf8e;
     --err: #f0554d;
     --header-h: 60px;
@@ -122,11 +125,19 @@
       radial-gradient(circle at 100% 100%, rgba(122,160,255,0.10), transparent 50%),
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-repeat: no-repeat, no-repeat, repeat;
-    border:1px solid var(--border);
+    border: 1px solid transparent;
     box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 30px 80px -40px var(--accent-glow);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: box-shadow 0.2s ease;
   }
-  .convert-widget.drag{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 30px 80px -30px var(--accent-glow); }
+  .convert-widget::after{
+    content:''; position:absolute; inset:0; border-radius: inherit; padding:1px;
+    background: linear-gradient(135deg, var(--border-grad-1), var(--border-grad-2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    pointer-events:none; opacity:0.55; transition: opacity 0.2s ease;
+  }
+  .convert-widget.drag::after{ opacity:1; }
+  .convert-widget.drag{ box-shadow: 0 0 0 1px var(--accent), 0 30px 80px -30px var(--accent-glow); }
 
   .cw-stats{
     position:relative;
@@ -169,8 +180,33 @@
   .cw-cloud-btn svg{ width:18px; height:18px; }
   .cw-cloud-btn:hover{ color: var(--text); }
 
-  .cw-formats-row{ display:flex; align-items:center; justify-content:center; gap:10px; margin-top:16px; }
+  .cw-drop-icon{
+    width:56px; height:56px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center;
+    color: var(--accent-icon);
+  }
+  .cw-drop-icon svg{ width:44px; height:44px; }
+  .cw-drop-title{ text-align:center; font-size:19px; font-weight:700; margin-bottom:6px; }
+  .cw-drop-sub{ text-align:center; font-size:13.5px; color: var(--text-dim); margin-bottom:22px; }
+
+  .cw-secure-hint{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    text-align:center; font-size:12.5px; color: var(--text-dim); margin-top:16px;
+  }
+  .cw-secure-hint svg{ width:13px; height:13px; flex-shrink:0; }
+
+  .cw-formats-row{ display:flex; align-items:flex-end; justify-content:center; gap:10px; margin-top:26px; }
+  .fmt-group{ display:flex; flex-direction:column; gap:6px; }
+  .fmt-group-label{ font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color: var(--text-dim); padding-left:2px; }
   .cw-arrow{ color: var(--text-dim); font-size:14px; }
+
+  .cw-swap-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:38px; height:38px; flex-shrink:0; margin-bottom:1px;
+    background: var(--bg-input); border:1px solid var(--border); border-radius:9px;
+    color: var(--text-dim); cursor:pointer; transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .cw-swap-btn:hover{ color: var(--accent-icon); border-color: var(--accent-icon); }
+  .cw-swap-btn svg{ width:16px; height:16px; }
 
   .fmt-picker{ position:relative; }
   .fmt-btn{
@@ -180,8 +216,8 @@
   }
   .fmt-btn svg{ width:16px; height:16px; transition: transform 0.15s ease; flex-shrink:0; }
   .fmt-btn.open svg{ transform: rotate(180deg); }
-  .fmt-btn.dark{ background:#0e0f13; color:#fff; border:1px solid var(--border); }
-  .fmt-btn.light{ background:#fff; color:#111; }
+  .fmt-btn.dark{ background: var(--bg-input); color:#fff; border:1px solid var(--border); }
+  .fmt-btn.light{ background: var(--bg-input); color: var(--text-dim); border:1px solid var(--border); }
 
   .fmt-dropdown{
     display:none; position:absolute; top: calc(100% + 8px); left:0;
@@ -564,10 +600,16 @@
       Мы преобразовали <b id="cwStatsFiles">3 309 088</b> файлов общим размером <b id="cwStatsSize">60 086</b> ГБ
     </div>
 
+    <div class="cw-drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M12 12v6M9 15h6"/></svg>
+    </div>
+    <div class="cw-drop-title">Выберите файлы или перетащите их сюда</div>
+    <div class="cw-drop-sub">Поддерживаются все популярные форматы</div>
+
     <div class="cw-choose-row">
       <button type="button" class="cw-choose-btn" id="chooseFilesBtn">
         <svg class="cw-choose-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><circle cx="16" cy="14" r="2.4"/><path d="M20 17.6 22 20"/></svg>
-        Выберите файлы
+        Выбрать файлы
       </button>
       <button type="button" class="cw-cloud-btn" title="Dropbox — скоро" data-toast="Загрузка из Dropbox скоро появится">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="m6 2 6 3.8L6 9.6 0 5.8 6 2Zm12 0 6 3.8-6 3.8-6-3.8L18 2ZM0 13.4l6-3.8 6 3.8-6 3.8-6-3.8Zm18-3.8 6 3.8-6 3.8-6-3.8 6-3.8ZM6 17.9l6-3.8 6 3.8-6 3.7-6-3.7Z"/></svg>
@@ -577,44 +619,57 @@
       </button>
     </div>
 
+    <div class="cw-secure-hint">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Ваши файлы защищены и не загружаются на сервер
+    </div>
+
     <div class="cw-formats-row">
-      <div class="fmt-picker" id="sourcePicker">
-        <button type="button" class="fmt-btn dark" id="sourceBtn">
-          <span id="sourceBtnLabel">HEIC</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        <div class="fmt-dropdown fmt-dropdown-source" id="sourceDropdown">
-          <button type="button" class="fmt-chip">HEIC</button>
-          <button type="button" class="fmt-chip">HEIF</button>
+      <div class="fmt-group">
+        <div class="fmt-group-label">Из</div>
+        <div class="fmt-picker" id="sourcePicker">
+          <button type="button" class="fmt-btn dark" id="sourceBtn">
+            <span id="sourceBtnLabel">HEIC</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="fmt-dropdown fmt-dropdown-source" id="sourceDropdown">
+            <button type="button" class="fmt-chip">HEIC</button>
+            <button type="button" class="fmt-chip">HEIF</button>
+          </div>
         </div>
       </div>
 
-      <span class="cw-arrow">в</span>
+      <button type="button" class="cw-swap-btn" id="swapFormatsBtn" title="Поменять местами" aria-label="Поменять местами">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>
+      </button>
 
-      <div class="fmt-picker" id="targetPicker">
-        <button type="button" class="fmt-btn light" id="targetBtn">
-          <span id="targetBtnLabel">Выберите формат</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        <div class="fmt-dropdown fmt-dropdown-target" id="targetDropdown">
-          <div class="fmt-search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="fmtSearch" placeholder="Поиск">
-          </div>
-          <div class="fmt-body">
-            <div class="fmt-categories" id="fmtCategories">
-              <button type="button" class="fmt-cat active" data-cat="image">Изображение <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-              <button type="button" class="fmt-cat" data-cat="doc">Документ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-              <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-              <button type="button" class="fmt-cat" data-cat="vector">Вектор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+      <div class="fmt-group">
+        <div class="fmt-group-label">В</div>
+        <div class="fmt-picker" id="targetPicker">
+          <button type="button" class="fmt-btn light" id="targetBtn">
+            <span id="targetBtnLabel">Выберите формат</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="fmt-dropdown fmt-dropdown-target" id="targetDropdown">
+            <div class="fmt-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="fmtSearch" placeholder="Поиск">
             </div>
-            <div class="fmt-grid" id="fmtGrid"></div>
+            <div class="fmt-body">
+              <div class="fmt-categories" id="fmtCategories">
+                <button type="button" class="fmt-cat active" data-cat="image">Изображение <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="doc">Документ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="vector">Вектор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+              </div>
+              <div class="fmt-grid" id="fmtGrid"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="cw-hint">Перетащите файлы сюда · 1 GB максимальный размер файла или <a id="registerLink">Регистрация</a></div>
+    <div class="cw-hint">1 GB максимальный размер файла или <a id="registerLink">Регистрация</a></div>
   </div>
 
   <hr class="divider">
@@ -951,6 +1006,21 @@
   }
   setupPicker('sourceBtn', 'sourceDropdown');
   setupPicker('targetBtn', 'targetDropdown');
+
+  document.getElementById('swapFormatsBtn').addEventListener('click', ()=>{
+    const sourceLabel = document.getElementById('sourceBtnLabel');
+    const targetLabel = document.getElementById('targetBtnLabel');
+    if(!selectedTargetCode){
+      showToast('Сначала выберите формат, в который конвертировать');
+      return;
+    }
+    const oldSource = sourceLabel.textContent;
+    const oldTarget = targetLabel.textContent;
+    sourceLabel.textContent = oldTarget;
+    selectTargetFormat(oldSource);
+    showToast(`Теперь конвертируем из ${oldTarget} в ${oldSource}`);
+  });
+
   document.addEventListener('click', closeAllDropdowns);
   document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeAllDropdowns(); });
 
