@@ -68,7 +68,7 @@
     position:relative;
     border-radius:16px;
     padding: 26px 24px 20px;
-    text-align:left;
+    text-align:center;
     background-color: #1a1c24;
     background-image:
       radial-gradient(circle at 15% 0%, rgba(79,127,255,0.14), transparent 55%),
@@ -104,8 +104,8 @@
   .cw-stats-close:hover{ background: rgba(255,255,255,0.08); color: var(--text); }
   .cw-stats-close svg{ width:16px; height:16px; }
 
-  .cw-top{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-  .cw-choose{ display:flex; align-items:center; gap:8px; }
+  .cw-top{ display:flex; align-items:center; justify-content:center; gap:16px; row-gap:14px; flex-wrap:wrap; }
+  .cw-choose{ display:flex; align-items:center; justify-content:center; gap:8px; flex-basis:100%; }
   .cw-choose-btn{
     display:inline-flex; align-items:center; gap:10px;
     background: var(--accent); color:#fff; border:none;
@@ -123,7 +123,7 @@
   .cw-cloud-btn svg{ width:18px; height:18px; }
   .cw-cloud-btn:hover{ color: var(--text); }
 
-  .cw-formats{ display:flex; align-items:center; gap:10px; }
+  .cw-formats{ display:flex; align-items:center; justify-content:center; gap:10px; flex-basis:100%; }
   .cw-arrow{ color: var(--text-dim); font-size:14px; }
 
   .fmt-picker{ position:relative; }
