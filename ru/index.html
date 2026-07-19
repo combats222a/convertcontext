@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConvertHub — конвертер файлов онлайн в любой формат</title>
+<meta name="description" content="Конвертируйте изображения и другие файлы в любой формат прямо в браузере. Быстро, бесплатно, без загрузки на сервер.">
+<style>
+  :root{
+    --bg: #0e0f13;
+    --bg-panel: #16181f;
+    --bg-input: #1c1f28;
+    --border: #262a35;
+    --text: #e8e9ed;
+    --text-dim: #8b8f9c;
+    --accent: #4f7fff;
+    --accent-dim: #3a5fd0;
+    --ok: #3ecf8e;
+    --err: #f0554d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    min-height:100vh;
+  }
+  a{ color:inherit; }
+  header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 18px 6vw; border-bottom:1px solid var(--border);
+    gap:14px;
+  }
+  .header-left{ display:flex; align-items:center; gap:14px; }
+
+  .menu-trigger-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:38px; height:38px; flex-shrink:0;
+    background: var(--bg-panel); border:1px solid var(--border); border-radius:9px;
+    color: var(--text); cursor:pointer; padding:0;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .menu-trigger-btn:hover{ background: var(--bg-input); }
+  .menu-trigger-btn.active{ border-color: var(--accent); color: var(--accent); background: rgba(79,127,255,0.1); }
+  .menu-trigger-btn svg{ width:18px; height:18px; }
+
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; text-decoration:none; }
+  .brand .logo{
+    width:28px; height:28px; border-radius:7px;
+    background: linear-gradient(135deg, var(--accent), #7aa0ff);
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
+  .header-cta{
+    font-size:13px; font-weight:600; padding:9px 16px; border-radius:9px;
+    border:1px solid var(--border); background: var(--bg-panel); color:var(--text);
+    text-decoration:none; cursor:pointer; transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .header-cta:hover{ border-color: var(--accent); color: var(--accent); }
+
+  /* ===== Раздел-навигация по типам файлов — над главным блоком ===== */
+  .top-cats{
+    display:flex; justify-content:center; flex-wrap:wrap; gap:8px;
+    max-width:760px; margin: 5vh auto 0; padding:0 6vw;
+  }
+  .top-cat{
+    display:inline-flex; align-items:center; gap:7px;
+    background: var(--bg-panel); border:1px solid var(--border); color: var(--text-dim);
+    padding:9px 16px; border-radius:20px; font-size:13px; font-weight:600;
+    cursor:pointer; transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .top-cat:hover{ color: var(--text); border-color:#3a3f4d; }
+  .top-cat.active{ color:#fff; background: var(--accent); border-color: var(--accent); }
+
+  main{ max-width: 760px; margin: 0 auto; padding: 5vh 6vw 10vh; text-align:center; }
+
+  h1{ font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight:700; margin-bottom:12px; }
+  .sub{ color: var(--text-dim); font-size:15px; margin-bottom:40px; line-height:1.5; }
+
+  /* ===== Виджет конвертации (шахматный фон) ===== */
+  .convert-widget{
+    position:relative;
+    border-radius:16px;
+    padding: 26px 24px 22px;
+    text-align:left;
+    background-color: #1a1c24;
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(79,127,255,0.14), transparent 55%),
+      radial-gradient(circle at 100% 100%, rgba(122,160,255,0.10), transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat, repeat;
+    border:1px solid var(--border);
+    transition: border-color 0.2s ease;
+  }
+  .convert-widget.drag{ border-color: var(--accent); }
+
+  .cw-stats{
+    position:relative;
+    margin: -26px -24px 22px;
+    padding: 16px 46px 16px 20px;
+    border-radius: 15px 15px 0 0;
+    background: rgba(255,255,255,0.035);
+    border-bottom: 1px solid var(--border);
+    text-align:center;
+    font-size:14px;
+    color: var(--text-dim);
+    line-height:1.5;
+  }
+  .cw-stats b{ color: var(--text); font-variant-numeric: tabular-nums; }
+  .cw-stats.hidden{ display:none; }
+  .cw-stats-close{
+    position:absolute; top:10px; right:12px;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    background:none; border:none; border-radius:7px;
+    color: var(--text-dim); cursor:pointer; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cw-stats-close:hover{ background: rgba(255,255,255,0.08); color: var(--text); }
+  .cw-stats-close svg{ width:16px; height:16px; }
+
+  .cw-choose-row{ display:flex; align-items:center; justify-content:center; gap:8px; }
+  .cw-choose-btn{
+    display:inline-flex; align-items:center; gap:10px;
+    background: var(--accent); color:#fff; border:none;
+    padding: 14px 26px; border-radius:9px; font-size:15px; font-weight:600;
+    cursor:pointer; transition: background 0.15s ease;
+  }
+  .cw-choose-btn:hover{ background: var(--accent-dim); }
+  .cw-choose-icon{ width:18px; height:18px; flex-shrink:0; }
+  .cw-cloud-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:9px; flex-shrink:0;
+    background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim); cursor:not-allowed; transition: color 0.15s ease;
+  }
+  .cw-cloud-btn svg{ width:18px; height:18px; }
+  .cw-cloud-btn:hover{ color: var(--text); }
+
+  .cw-hint{ font-size:13px; color: var(--text-dim); margin-top:18px; text-align:center; }
+  .cw-hint a{ color: var(--accent); text-decoration:underline; cursor:pointer; }
+
+  .cw-toast{
+    position:fixed; left:50%; bottom:24px; transform: translate(-50%, 12px);
+    background:#1c1f28; border:1px solid var(--border); color:var(--text);
+    padding:10px 18px; border-radius:9px; font-size:13px;
+    opacity:0; pointer-events:none; transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index:500; box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    max-width:86vw; text-align:center;
+  }
+  .cw-toast.show{ opacity:1; transform: translate(-50%, 0); }
+
+  footer{
+    border-top:1px solid var(--border);
+    padding: 22px 6vw; text-align:center;
+    font-size:12px; color: var(--text-dim);
+  }
+
+  /* ===== Боковой сайдбар ===== */
+  .sidebar-overlay{
+    position:fixed; inset: var(--header-h, 65px) 0 0 0;
+    background: rgba(0,0,0,0.35);
+    opacity:0; pointer-events:none;
+    transition: opacity 0.2s ease;
+    z-index:150;
+  }
+  .sidebar-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .sidebar{
+    position:fixed; top: var(--header-h, 65px); left:0; bottom:0;
+    width:260px; max-width:80vw;
+    background: var(--bg-panel);
+    border-right:1px solid var(--border);
+    box-shadow: 8px 0 28px rgba(0,0,0,0.45);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index:200;
+    overflow-y:auto;
+    padding: 18px 14px;
+    text-align:left;
+  }
+  .sidebar.open{ transform: translateX(0); }
+
+  .sidebar-section{ margin-bottom:22px; }
+  .sidebar-title{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color: var(--text-dim); padding: 0 10px 8px;
+  }
+  .sidebar-link{
+    display:flex; align-items:center; gap:10px;
+    width:100%; background:none; border:none; color: var(--text);
+    font-size:14px; text-align:left; padding:10px 10px; border-radius:8px;
+    cursor:pointer; transition: background 0.15s ease; text-decoration:none;
+  }
+  .sidebar-link:hover{ background: var(--bg-input); }
+  .sidebar-link.active{ color: var(--accent); background: rgba(79,127,255,0.1); }
+
+  @media (max-width:480px){
+    .top-cats{ margin-top:4vh; }
+  }
+</style>
+</head>
+<body>
+<header id="siteHeader">
+  <div class="header-left">
+    <button class="menu-trigger-btn" id="menuTriggerBtn" aria-label="Открыть меню" aria-expanded="false">
+      <svg id="menuTriggerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"></line>
+        <line x1="4" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="18" x2="20" y2="18"></line>
+      </svg>
+    </button>
+    <a class="brand" href="/ru/"><span class="logo">🗂</span> ConvertHub</a>
+  </div>
+  <a class="header-cta" id="registerBtn" href="#">Регистрация</a>
+</header>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar" aria-hidden="true">
+  <div class="sidebar-section">
+    <div class="sidebar-title">Главная</div>
+    <button class="sidebar-link active" data-action="scroll-top">🏠 Конвертер файлов</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Конвертация</div>
+    <a class="sidebar-link" href="/ru/heic-jpg/">📷 HEIC → JPG / PNG</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Аккаунт</div>
+    <button class="sidebar-link" data-action="toast" data-toast="Тарифы и подписка скоро появятся">💳 Тарифы и подписка</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">Информация</div>
+    <button class="sidebar-link" data-action="toast" data-toast="Скоро появится">🔒 Конфиденциальность</button>
+    <button class="sidebar-link" data-action="toast" data-toast="Скоро появится">✉️ Поддержка</button>
+  </div>
+</aside>
+
+<!-- Раздел с категориями файлов — над главным виджетом -->
+<nav class="top-cats" id="topCats" aria-label="Разделы конвертации">
+  <button type="button" class="top-cat active" data-cat="image">🖼️ Изображение</button>
+  <button type="button" class="top-cat" data-cat="doc">📄 Документ</button>
+  <button type="button" class="top-cat" data-cat="ebook">📚 Электронная книга</button>
+  <button type="button" class="top-cat" data-cat="font">🔤 Шрифт</button>
+  <button type="button" class="top-cat" data-cat="vector">✏️ Вектор</button>
+  <button type="button" class="top-cat" data-cat="cad">📐 CAD</button>
+</nav>
+
+<main>
+  <h1>Конвертер файлов</h1>
+  <p class="sub">Сконвертируйте ваши файлы в любой формат прямо в браузере — без загрузки на сервер.</p>
+
+  <div class="convert-widget" id="dropzone">
+    <input type="file" id="fileInput" multiple style="display:none">
+
+    <div class="cw-stats" id="cwStats">
+      <button type="button" class="cw-stats-close" id="cwStatsClose" aria-label="Скрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      Мы преобразовали <b id="cwStatsFiles">3 309 088</b> файлов общим размером <b id="cwStatsSize">60 086</b> ГБ
+    </div>
+
+    <div class="cw-choose-row">
+      <button type="button" class="cw-choose-btn" id="chooseFilesBtn">
+        <svg class="cw-choose-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><circle cx="16" cy="14" r="2.4"/><path d="M20 17.6 22 20"/></svg>
+        Выберите файлы
+      </button>
+      <button type="button" class="cw-cloud-btn" title="Dropbox — скоро" data-toast="Загрузка из Dropbox скоро появится">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="m6 2 6 3.8L6 9.6 0 5.8 6 2Zm12 0 6 3.8-6 3.8-6-3.8L18 2ZM0 13.4l6-3.8 6 3.8-6 3.8-6-3.8Zm18-3.8 6 3.8-6 3.8-6-3.8 6-3.8ZM6 17.9l6-3.8 6 3.8-6 3.7-6-3.7Z"/></svg>
+      </button>
+      <button type="button" class="cw-cloud-btn" title="Google Drive — скоро" data-toast="Загрузка из Google Drive скоро появится">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.6 2h8.8l7.1 12.3-4.4 7.7H4.9L.5 14.3 7.6 2Zm1.1 2-5.4 9.4h10.8L8.7 4Zm2 10.4L6.3 22h11.4l-2.1-3.7-4.9-3.9Zm7.3-1L13.9 22h5.6l3-5.3-3.5-5.3ZM8.1 4l4.4 7.6h5.4L13.5 4H8.1Z"/></svg>
+      </button>
+    </div>
+
+    <div class="cw-hint">Перетащите файлы сюда · 1 GB максимальный размер файла или <a id="registerLink">Регистрация</a></div>
+  </div>
+</main>
+
+<footer>ConvertHub — без сервера, без слежки, без очереди</footer>
+
+<script>
+  (function initSidebar(){
+    const header = document.getElementById('siteHeader');
+    const btn = document.getElementById('menuTriggerBtn');
+    const icon = document.getElementById('menuTriggerIcon');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function syncHeaderHeight(){
+      document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+    }
+    syncHeaderHeight();
+    if(typeof ResizeObserver !== 'undefined'){
+      new ResizeObserver(syncHeaderHeight).observe(header);
+    } else {
+      window.addEventListener('resize', syncHeaderHeight);
+    }
+
+    function setOpen(open){
+      sidebar.classList.toggle('open', open);
+      overlay.classList.toggle('open', open);
+      btn.classList.toggle('active', open);
+      btn.setAttribute('aria-expanded', String(open));
+      sidebar.setAttribute('aria-hidden', String(!open));
+      icon.innerHTML = open
+        ? '<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>'
+        : '<line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line>';
+    }
+
+    btn.addEventListener('click', ()=> setOpen(!sidebar.classList.contains('open')));
+    overlay.addEventListener('click', ()=> setOpen(false));
+    document.addEventListener('keydown', e=>{ if(e.key === 'Escape') setOpen(false); });
+
+    sidebar.querySelectorAll('.sidebar-link').forEach(link=>{
+      link.addEventListener('click', (e)=>{
+        const action = link.dataset.action;
+        if(action === 'scroll-top'){
+          document.getElementById('dropzone')?.scrollIntoView({behavior:'smooth', block:'center'});
+        } else if(action === 'toast'){
+          e.preventDefault();
+          showToast(link.dataset.toast || 'Скоро появится');
+        }
+        setOpen(false);
+      });
+    });
+  })();
+
+  (function initStatsBar(){
+    const bar = document.getElementById('cwStats');
+    const closeBtn = document.getElementById('cwStatsClose');
+    if(localStorage.getItem('ch_stats_dismissed') === '1'){
+      bar.classList.add('hidden');
+    }
+    closeBtn.addEventListener('click', ()=>{
+      bar.classList.add('hidden');
+      localStorage.setItem('ch_stats_dismissed', '1');
+    });
+  })();
+
+  function showToast(msg){
+    let t = document.getElementById('cwToast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'cwToast';
+      t.className = 'cw-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(()=> t.classList.remove('show'), 2400);
+  }
+
+  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', font:'Шрифт', vector:'Вектор', cad:'CAD' };
+
+  /* Раздел-навигация над виджетом — переключает акцент категории.
+     Реально сейчас поддерживается только "Изображение" (HEIC → JPG/PNG),
+     остальные разделы — заглушки с тостом "скоро появится". */
+  document.querySelectorAll('.top-cat').forEach(cat=>{
+    cat.addEventListener('click', ()=>{
+      const key = cat.dataset.cat;
+      document.querySelectorAll('.top-cat').forEach(c=>c.classList.remove('active'));
+      cat.classList.add('active');
+      if(key === 'image'){
+        document.getElementById('dropzone')?.scrollIntoView({behavior:'smooth', block:'center'});
+      } else {
+        showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
+      }
+    });
+  });
+
+  document.querySelectorAll('.cw-cloud-btn').forEach(b=>{
+    b.addEventListener('click', ()=> showToast(b.dataset.toast || 'Скоро появится'));
+  });
+
+  document.getElementById('registerBtn').addEventListener('click', e=>{
+    e.preventDefault();
+    showToast('Регистрация скоро появится');
+  });
+  document.getElementById('registerLink').addEventListener('click', e=>{
+    e.preventDefault();
+    showToast('Регистрация скоро появится');
+  });
+
+  document.getElementById('chooseFilesBtn').addEventListener('click', ()=> fileInput.click());
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  ['dragenter','dragover'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, e=>{ e.preventDefault(); dropzone.classList.remove('drag'); });
+  });
+  dropzone.addEventListener('drop', e=> handleFiles(e.dataTransfer.files));
+  fileInput.addEventListener('change', e=> handleFiles(e.target.files));
+
+  /* Сейчас реально работает только конвертация HEIC/HEIF → JPG/PNG на
+     отдельной странице /ru/heic-jpg/. Отсюда, с главной, файл просто
+     определяется по расширению и пользователь перенаправляется туда;
+     остальные форматы — заглушка с тостом "скоро". */
+  function handleFiles(fileList){
+    const file = fileList[0];
+    if(!file) return;
+    if(/\.(heic|heif)$/i.test(file.name)){
+      showToast('Обнаружен HEIC-файл — переходим к конвертации…');
+      setTimeout(()=>{ window.location.href = '/ru/heic-jpg/'; }, 900);
+    } else {
+      const ext = (file.name.split('.').pop() || 'файл').toUpperCase();
+      showToast(`Конвертация формата ${ext} скоро появится — пока доступен HEIC → JPG/PNG`);
+    }
+  }
+</script>
+</body>
+</html>
