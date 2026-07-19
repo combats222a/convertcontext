@@ -68,18 +68,40 @@
     border-radius:16px;
     padding: 26px 24px 20px;
     text-align:left;
-    background-color: var(--bg-panel);
+    background-color: #1a1c24;
     background-image:
-      radial-gradient(circle at 15% 0%, rgba(79,127,255,0.16), transparent 55%),
-      radial-gradient(circle at 100% 100%, rgba(122,160,255,0.12), transparent 50%),
-      radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px);
-    background-size: 100% 100%, 100% 100%, 20px 20px;
-    background-position: 0 0, 0 0, 0 0;
+      radial-gradient(circle at 15% 0%, rgba(79,127,255,0.14), transparent 55%),
+      radial-gradient(circle at 100% 100%, rgba(122,160,255,0.10), transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat, repeat;
     border:1px solid var(--border);
     transition: border-color 0.2s ease, opacity 0.2s ease;
   }
   .convert-widget.drag{ border-color: var(--accent); }
   .convert-widget.locked{ opacity:0.4; pointer-events:none; }
+
+  .cw-stats{
+    position:relative;
+    margin: -26px -24px 22px;
+    padding: 16px 46px 16px 20px;
+    border-radius: 15px 15px 0 0;
+    background: rgba(255,255,255,0.035);
+    border-bottom: 1px solid var(--border);
+    text-align:center;
+    font-size:14px;
+    color: var(--text-dim);
+    line-height:1.5;
+  }
+  .cw-stats b{ color: var(--text); font-variant-numeric: tabular-nums; }
+  .cw-stats.hidden{ display:none; }
+  .cw-stats-close{
+    position:absolute; top:10px; right:12px;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    background:none; border:none; border-radius:7px;
+    color: var(--text-dim); cursor:pointer; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cw-stats-close:hover{ background: rgba(255,255,255,0.08); color: var(--text); }
+  .cw-stats-close svg{ width:16px; height:16px; }
 
   .cw-top{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
   .cw-choose{ display:flex; align-items:center; gap:8px; }
@@ -153,9 +175,10 @@
     background:none; border:none; color: var(--text-dim); text-align:left;
     padding:8px 8px; border-radius:7px; font-size:13px; cursor:pointer; white-space:nowrap;
   }
-  .fmt-cat svg{ width:14px; height:14px; flex-shrink:0; }
+  .fmt-cat svg{ width:14px; height:14px; flex-shrink:0; opacity:0; }
   .fmt-cat:hover{ background: var(--bg-input); }
   .fmt-cat.active{ color:#fff; background: rgba(255,255,255,0.05); }
+  .fmt-cat.active svg{ opacity:1; }
 
   .fmt-grid{
     flex:1; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;
@@ -308,7 +331,7 @@
 <aside class="sidebar" id="sidebar" aria-hidden="true">
   <div class="sidebar-section">
     <div class="sidebar-title">Конвертация</div>
-    <button class="sidebar-link active" data-action="scroll-top">📷 HEIC → JPG / PNG</button>
+    <button class="sidebar-link active" data-action="scroll-top">📷 HEIC → Конвертация в любой формат</button>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-title">Аккаунт</div>
@@ -327,6 +350,17 @@
 
   <div class="convert-widget" id="dropzone">
     <input type="file" id="fileInput" accept=".heic,.heif" multiple style="display:none">
+
+    <!-- Плашка со статистикой — цифры пока заглушка, замени на реальные
+         данные из бэкенда (например, отдельный /api/stats), когда появится
+         учёт по всем пользователям. Закрывается крестиком и запоминает
+         это в localStorage, чтобы не показывалась повторно. -->
+    <div class="cw-stats" id="cwStats">
+      <button type="button" class="cw-stats-close" id="cwStatsClose" aria-label="Скрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      Мы преобразовали <b id="cwStatsFiles">3 309 088</b> файлов общим размером <b id="cwStatsSize">60 086</b> ГБ
+    </div>
 
     <div class="cw-top">
       <div class="cw-choose">
@@ -369,11 +403,11 @@
             <div class="fmt-body">
               <div class="fmt-categories" id="fmtCategories">
                 <button type="button" class="fmt-cat active" data-cat="image">Изображение <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-                <button type="button" class="fmt-cat" data-cat="doc">Документ</button>
-                <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга</button>
-                <button type="button" class="fmt-cat" data-cat="font">Шрифт</button>
-                <button type="button" class="fmt-cat" data-cat="vector">Вектор</button>
-                <button type="button" class="fmt-cat" data-cat="cad">CAD</button>
+                <button type="button" class="fmt-cat" data-cat="doc">Документ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="ebook">Электронная книга <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="font">Шрифт <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="vector">Вектор <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+                <button type="button" class="fmt-cat" data-cat="cad">CAD <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
               </div>
               <div class="fmt-grid" id="fmtGrid"></div>
             </div>
@@ -458,6 +492,19 @@
         }
         setOpen(false);
       });
+    });
+  })();
+
+  /* ===== Плашка со статистикой — закрывается и запоминает это в localStorage ===== */
+  (function initStatsBar(){
+    const bar = document.getElementById('cwStats');
+    const closeBtn = document.getElementById('cwStatsClose');
+    if(localStorage.getItem('ch_stats_dismissed') === '1'){
+      bar.classList.add('hidden');
+    }
+    closeBtn.addEventListener('click', ()=>{
+      bar.classList.add('hidden');
+      localStorage.setItem('ch_stats_dismissed', '1');
     });
   })();
 
@@ -590,6 +637,21 @@
     {code:'PGX', enabled:false},
   ];
 
+  // Заглушки-списки для остальных разделов — коды форматов взяты из примера,
+  // все пока неактивны (клик даёт тост "скоро"), реально работает только
+  // раздел "Изображение" → JPG/PNG.
+  function toFormats(codes){ return codes.map(code => ({code, enabled:false})); }
+  const FORMATS = {
+    image: IMAGE_FORMATS,
+    doc: toFormats(['PDF','DOC','DOCX','XPS','DOCM','DOTX','ABW','AW','ODT','RTF','DOT','DOTM','DJVU','DBK','KWD','SXW','OXPS']),
+    ebook: toFormats(['PDB','EPUB','AZW3','FB2','LRF','MOBI','RB','SNB','TCR']),
+    font: toFormats(['PS']),
+    vector: toFormats(['SVG','EPS','AI','PLT','SK','FIG','PS','EMF','WMF','CGM','SK1']),
+    cad: toFormats(['DXF']),
+  };
+  const CAT_LABELS = { image:'Изображение', doc:'Документ', ebook:'Электронная книга', font:'Шрифт', vector:'Вектор', cad:'CAD' };
+  let currentCategory = 'image';
+
   function showToast(msg){
     let t = document.getElementById('cwToast');
     if(!t){
@@ -615,8 +677,9 @@
   function renderFmtGrid(filter){
     const grid = document.getElementById('fmtGrid');
     const q = (filter || '').trim().toUpperCase();
+    const list = FORMATS[currentCategory] || [];
     grid.innerHTML = '';
-    const matches = IMAGE_FORMATS.filter(f => !q || f.code.includes(q));
+    const matches = list.filter(f => !q || f.code.includes(q));
     matches.forEach(f=>{
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -637,12 +700,22 @@
 
   document.getElementById('fmtSearch').addEventListener('input', e=> renderFmtGrid(e.target.value));
 
-  // Раздел "Изображение" — единственный реально доступный сейчас; остальные — тост-заглушка.
+  // Переключение раздела — сетка форматов справа перерисовывается под выбранный
+  // раздел; реально доступен пока только "Изображение", остальные — превью
+  // будущего списка форматов с тостом-напоминанием, что раздел скоро откроется.
   document.querySelectorAll('.fmt-cat').forEach(cat=>{
     cat.addEventListener('click', e=>{
       e.stopPropagation();
-      if(cat.dataset.cat === 'image') return;
-      showToast(`Раздел «${cat.textContent.trim()}» скоро появится`);
+      const key = cat.dataset.cat;
+      if(key === currentCategory) return;
+      currentCategory = key;
+      document.querySelectorAll('.fmt-cat').forEach(c=>c.classList.remove('active'));
+      cat.classList.add('active');
+      document.getElementById('fmtSearch').value = '';
+      renderFmtGrid('');
+      if(key !== 'image'){
+        showToast(`Раздел «${CAT_LABELS[key]}» скоро появится`);
+      }
     });
   });
 
