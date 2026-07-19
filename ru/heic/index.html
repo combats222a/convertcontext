@@ -616,15 +616,16 @@
   let targetFormat = null; // пока пользователь не выбрал формат — конвертация недоступна
   let selectedTargetCode = null;
 
-  // Список форматов "как в примере" — реально рабочие сейчас только JPG и PNG,
+  // Список форматов "как в примере" — реально рабочие сейчас: JPG, PNG, WEBP,
+  // BMP, ICO, JFIF, JPE (конвертация через canvas в браузере, см. convertToSelectedFormat),
   // остальное показано для вида (roadmap) и по клику даёт тост "скоро".
   const IMAGE_FORMATS = [
     {code:'JPG', enabled:true}, {code:'PNG', enabled:true}, {code:'JPEG', enabled:false},
-    {code:'WEBP', enabled:false}, {code:'SVG', enabled:false}, {code:'TIFF', enabled:false},
-    {code:'GIF', enabled:false}, {code:'BMP', enabled:false}, {code:'PSD', enabled:false},
-    {code:'HDR', enabled:false}, {code:'JBG', enabled:false}, {code:'JPE', enabled:false},
-    {code:'ICO', enabled:false}, {code:'PDB', enabled:false}, {code:'AVIF', enabled:false},
-    {code:'JFIF', enabled:false}, {code:'RGB', enabled:false}, {code:'JPS', enabled:false},
+    {code:'WEBP', enabled:true}, {code:'SVG', enabled:false}, {code:'TIFF', enabled:false},
+    {code:'GIF', enabled:false}, {code:'BMP', enabled:true}, {code:'PSD', enabled:false},
+    {code:'HDR', enabled:false}, {code:'JBG', enabled:false}, {code:'JPE', enabled:true},
+    {code:'ICO', enabled:true}, {code:'PDB', enabled:false}, {code:'AVIF', enabled:false},
+    {code:'JFIF', enabled:true}, {code:'RGB', enabled:false}, {code:'JPS', enabled:false},
     {code:'CUR', enabled:false}, {code:'EXR', enabled:false}, {code:'JIF', enabled:false},
     {code:'HRZ', enabled:false}, {code:'WBMP', enabled:false}, {code:'MAP', enabled:false},
     {code:'PPM', enabled:false}, {code:'IPL', enabled:false}, {code:'PGM', enabled:false},
@@ -675,7 +676,7 @@
 
   function selectTargetFormat(code){
     selectedTargetCode = code;
-    targetFormat = code === 'PNG' ? 'png' : 'jpeg';
+    targetFormat = code;
     document.getElementById('targetBtnLabel').textContent = code;
     renderFmtGrid(document.getElementById('fmtSearch').value);
     closeAllDropdowns();
@@ -798,6 +799,134 @@
   });
   fileInput.addEventListener('change', e=>{ handleFiles(e.target.files); });
 
+  // ===== Конвертация: HEIC -> canvas -> нужный формат =====
+  // heic2any умеет декодировать HEIC только в JPEG/PNG. Поэтому сначала всегда
+  // получаем PNG (без потерь), рисуем на canvas, а из canvas уже кодируем
+  // в конечный формат — так один и тот же пайплайн покрывает сразу несколько
+  // выходных форматов без лишних зависимостей.
+  const EXT_MAP = { JPG:'jpg', PNG:'png', WEBP:'webp', BMP:'bmp', ICO:'ico', JFIF:'jfif', JPE:'jpe' };
+
+  function loadImage(blob){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=> resolve(img);
+      img.onerror = ()=> reject(new Error('Не удалось декодировать изображение'));
+      img.src = URL.createObjectURL(blob);
+    });
+  }
+
+  async function heicToCanvas(file){
+    const result = await heic2any({ blob: file, toType: 'image/png', quality: 0.92 });
+    const pngBlob = Array.isArray(result) ? result[0] : result;
+    const img = await loadImage(pngBlob);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    // Белая подложка — чтобы форматы без альфа-канала (JPG/BMP) не давали
+    // чёрные края на месте прозрачности.
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    return canvas;
+  }
+
+  function canvasToBlob(canvas, mime, quality){
+    return new Promise(resolve=> canvas.toBlob(resolve, mime, quality));
+  }
+
+  // 24-битный BMP (BITMAPINFOHEADER), без сжатия, построчно снизу вверх —
+  // как того требует спецификация формата.
+  function encodeBMP(canvas){
+    const w = canvas.width, h = canvas.height;
+    const data = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+    const rowSize = Math.floor((24 * w + 31) / 32) * 4;
+    const pixelArraySize = rowSize * h;
+    const fileSize = 54 + pixelArraySize;
+    const buf = new ArrayBuffer(fileSize);
+    const view = new DataView(buf);
+
+    view.setUint8(0, 0x42); view.setUint8(1, 0x4D); // 'BM'
+    view.setUint32(2, fileSize, true);
+    view.setUint32(6, 0, true);
+    view.setUint32(10, 54, true);
+    view.setUint32(14, 40, true);
+    view.setInt32(18, w, true);
+    view.setInt32(22, h, true); // положительная высота — bottom-up
+    view.setUint16(26, 1, true);
+    view.setUint16(28, 24, true);
+    view.setUint32(30, 0, true);
+    view.setUint32(34, pixelArraySize, true);
+    view.setInt32(38, 2835, true);
+    view.setInt32(42, 2835, true);
+    view.setUint32(46, 0, true);
+    view.setUint32(50, 0, true);
+
+    let offset = 54;
+    for(let y = h - 1; y >= 0; y--){
+      for(let x = 0; x < w; x++){
+        const i = (y * w + x) * 4;
+        view.setUint8(offset++, data[i + 2]); // B
+        view.setUint8(offset++, data[i + 1]); // G
+        view.setUint8(offset++, data[i]);     // R
+      }
+      for(let p = 0; p < rowSize - w * 3; p++) view.setUint8(offset++, 0);
+    }
+    return new Blob([buf], { type: 'image/bmp' });
+  }
+
+  // ICO с одним PNG-кадром — валидный формат начиная с Windows Vista,
+  // поддерживается всеми современными просмотрщиками и браузерами.
+  // Иконки ограничены 256x256, поэтому большие фото сначала уменьшаем.
+  async function encodeICO(sourceCanvas){
+    const maxSize = 256;
+    const scale = Math.min(1, maxSize / Math.max(sourceCanvas.width, sourceCanvas.height));
+    const tw = Math.max(1, Math.round(sourceCanvas.width * scale));
+    const th = Math.max(1, Math.round(sourceCanvas.height * scale));
+    const c = document.createElement('canvas');
+    c.width = tw; c.height = th;
+    c.getContext('2d').drawImage(sourceCanvas, 0, 0, tw, th);
+
+    const pngBlob = await canvasToBlob(c, 'image/png');
+    const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
+    const headerSize = 22;
+    const out = new Uint8Array(headerSize + pngBytes.length);
+    const view = new DataView(out.buffer);
+    view.setUint16(0, 0, true);
+    view.setUint16(2, 1, true);
+    view.setUint16(4, 1, true);
+    out[6] = tw >= 256 ? 0 : tw;
+    out[7] = th >= 256 ? 0 : th;
+    out[8] = 0; out[9] = 0;
+    view.setUint16(10, 1, true);
+    view.setUint16(12, 32, true);
+    view.setUint32(14, pngBytes.length, true);
+    view.setUint32(18, headerSize, true);
+    out.set(pngBytes, headerSize);
+    return new Blob([out], { type: 'image/x-icon' });
+  }
+
+  async function convertToSelectedFormat(file, code){
+    const canvas = await heicToCanvas(file);
+    switch(code){
+      case 'PNG':
+        return canvasToBlob(canvas, 'image/png');
+      case 'JPG': case 'JFIF': case 'JPE':
+        return canvasToBlob(canvas, 'image/jpeg', 0.92);
+      case 'WEBP': {
+        const blob = await canvasToBlob(canvas, 'image/webp', 0.92);
+        if(!blob) throw new Error('WEBP не поддерживается в этом браузере');
+        return blob;
+      }
+      case 'BMP':
+        return encodeBMP(canvas);
+      case 'ICO':
+        return encodeICO(canvas);
+      default:
+        throw new Error('Этот формат пока не поддерживается');
+    }
+  }
+
   function handleFiles(fileList){
     if(!targetFormat){
       showToast('Сначала выберите формат, в который конвертировать');
@@ -821,11 +950,10 @@
       frame.innerHTML = `<div class="status working">Файл ${idx} — обработка…</div>`;
       sheet.appendChild(frame);
 
-      heic2any({ blob: file, toType: `image/${targetFormat}`, quality: 0.9 })
-        .then(result=>{
-          const blob = Array.isArray(result) ? result[0] : result;
+      convertToSelectedFormat(file, targetFormat)
+        .then(blob=>{
           const url = URL.createObjectURL(blob);
-          const ext = targetFormat === 'jpeg' ? 'jpg' : 'png';
+          const ext = EXT_MAP[targetFormat] || targetFormat.toLowerCase();
           const outName = file.name.replace(/\.(heic|heif)$/i, '') + '.' + ext;
           frame.innerHTML = `
             <img src="${url}" alt="${outName}">
@@ -836,11 +964,12 @@
           updateUI();
         })
         .catch(err=>{
-          frame.innerHTML = `<div class="status" style="color:#f0554d">Ошибка: не HEIC или повреждён</div>`;
+          frame.innerHTML = `<div class="status" style="color:#f0554d">Ошибка: ${err && err.message ? err.message : 'не HEIC или повреждён'}</div>`;
           console.error(err);
         });
     });
   }
+
 </script>
 </body>
 </html>
