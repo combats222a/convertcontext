@@ -6,6 +6,7 @@ import { ArrowLeftRight, FileUp, Lock, Upload, X } from "lucide-react";
 import { useConvert } from "@/components/home/convert-context";
 import { FixedFormatPicker, FullFormatPicker } from "@/components/home/format-selector";
 import { GlowCard } from "@/components/ui/glow-card";
+import { convertHeicToDocx, convertHeicToPdf, downloadBlob } from "@/lib/convert/document";
 
 const HEIC_EXT = /\.(heic|heif)$/i;
 const EBOOK_SOURCE_EXT = /\.(txt|md|markdown|html?|fb2|epub)$/i;
@@ -37,7 +38,7 @@ export function UploadCard({ reversed = false, fixedTarget = false }: UploadCard
     localStorage.setItem("ch_stats_dismissed", "1");
   }
 
-  function handleFiles(fileList: FileList | null) {
+  async function handleFiles(fileList: FileList | null) {
     const file = fileList?.[0];
     if (!file) return;
 
@@ -48,7 +49,29 @@ export function UploadCard({ reversed = false, fixedTarget = false }: UploadCard
     }
 
     if (mode === "process") {
-      // Мы уже находимся на выделенной странице-конвертере — конвертируем на месте.
+      const isRealDocTarget = category === "doc" && (targetCode === "PDF" || targetCode === "DOCX");
+
+      if (isRealDocTarget) {
+        if (!HEIC_EXT.test(file.name)) {
+          showToast("Пока поддерживается конвертация только из HEIC/HEIF");
+          return;
+        }
+
+        showToast("Конвертируем…");
+        try {
+          const blob =
+            targetCode === "PDF" ? await convertHeicToPdf(file) : await convertHeicToDocx(file);
+          const baseName = file.name.replace(HEIC_EXT, "");
+          downloadBlob(blob, `${baseName}.${targetCode.toLowerCase()}`);
+          showToast(`Готово! Файл сконвертирован в ${targetCode}`);
+        } catch (err) {
+          console.error(err);
+          showToast("Не удалось сконвертировать файл — попробуйте другой файл");
+        }
+        return;
+      }
+
+      // Остальные форматы пока не подключены к реальной кодировке.
       showToast(`Готово! Файл сконвертирован в ${targetCode}`);
       return;
     }

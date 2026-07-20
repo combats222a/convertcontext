@@ -29,6 +29,8 @@ export const STATIC_ROUTES = [
   "/heic-to",
   "/heic-jpg",
   "/heic-pdf",
+  "/heic-doc",
+  "/heic-docx",
   "/ebook",
   "/apps",
   "/pricing",
