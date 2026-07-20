@@ -48,10 +48,6 @@ const IMAGE_FORMATS: FormatItem[] = [
   { code: "JFI", enabled: true },
 ];
 
-function toFormats(codes: string[]): FormatItem[] {
-  return codes.map((code) => ({ code, enabled: false }));
-}
-
 export const FORMATS: Record<FormatCategory, FormatItem[]> = {
   image: IMAGE_FORMATS,
   doc: [

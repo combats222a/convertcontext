@@ -6,14 +6,16 @@
  * Файл никуда не загружается: сначала HEIC декодируется в JPEG через
  * heic2any (WASM-порт libheif), затем JPEG встраивается в PDF (jsPDF)
  * или DOCX (docx). Никакого сервера в процессе не участвует.
+ *
+ * Библиотеки импортируются динамически (await import(...)) внутри функций,
+ * а не в начале модуля: heic2any обращается к window/self уже на этапе
+ * импорта, а Next.js пререндерит клиентские компоненты и на сервере тоже —
+ * статический import сломал бы сборку ("window is not defined").
  */
-
-import heic2any from "heic2any";
-import { jsPDF } from "jspdf";
-import { Document, ImageRun, Packer, Paragraph } from "docx";
 
 /** Декодирует HEIC/HEIF-файл в JPEG-Blob. */
 async function heicToJpegBlob(file: File): Promise<Blob> {
+  const { default: heic2any } = await import("heic2any");
   const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
   return Array.isArray(result) ? result[0] : result;
 }
@@ -49,6 +51,7 @@ export async function convertHeicToPdf(file: File): Promise<Blob> {
   const jpegBlob = await heicToJpegBlob(file);
   const { width, height, dataUrl } = await readImage(jpegBlob);
 
+  const { jsPDF } = await import("jspdf");
   const orientation = width >= height ? "landscape" : "portrait";
   const pdf = new jsPDF({ orientation, unit: "px", format: [width, height] });
   pdf.addImage(dataUrl, "JPEG", 0, 0, width, height);
@@ -64,6 +67,7 @@ export async function convertHeicToDocx(file: File): Promise<Blob> {
   const maxWidth = 600;
   const scale = width > maxWidth ? maxWidth / width : 1;
 
+  const { Document, ImageRun, Packer, Paragraph } = await import("docx");
   const doc = new Document({
     sections: [
       {
