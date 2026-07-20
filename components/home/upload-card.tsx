@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeftRight, FileUp, Lock, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowLeftRight, FileUp, Lock, Upload } from "lucide-react";
 
 import { useConvert } from "@/components/home/convert-context";
 import { FixedFormatPicker, FullFormatPicker } from "@/components/home/format-selector";
@@ -25,18 +25,8 @@ export interface UploadCardProps {
 
 export function UploadCard({ reversed = false, fixedTarget = false }: UploadCardProps) {
   const { category, targetCode, mode, dropzoneRef, setOpenPicker, showToast } = useConvert();
-  const [statsHidden, setStatsHidden] = useState(true);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    setStatsHidden(localStorage.getItem("ch_stats_dismissed") === "1");
-  }, []);
-
-  function dismissStats() {
-    setStatsHidden(true);
-    localStorage.setItem("ch_stats_dismissed", "1");
-  }
 
   async function handleFiles(fileList: FileList | null) {
     const file = fileList?.[0];
@@ -114,7 +104,7 @@ export function UploadCard({ reversed = false, fixedTarget = false }: UploadCard
         setDragActive(false);
         handleFiles(e.dataTransfer.files);
       }}
-      className="p-6 text-left sm:p-8"
+      className="p-6 text-left sm:px-10 sm:py-8"
     >
       <input
         ref={fileInputRef}
@@ -123,21 +113,6 @@ export function UploadCard({ reversed = false, fixedTarget = false }: UploadCard
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
-
-      {!statsHidden && (
-        <div className="relative -mx-6 -mt-6 mb-6 rounded-t-[15px] border-b border-white/6 px-9 py-3 text-center text-[12.5px] leading-[1.5] text-muted-foreground sm:-mx-8 sm:-mt-8 sm:mb-8 sm:px-10">
-          <button
-            type="button"
-            onClick={dismissStats}
-            aria-label="Скрыть"
-            className="absolute top-1/2 right-3 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
-          >
-            <X className="size-3.5" />
-          </button>
-          Мы преобразовали <b className="tabular-nums text-foreground">3 309 088</b> файлов общим
-          размером <b className="tabular-nums text-foreground">60 086</b> ГБ
-        </div>
-      )}
 
       {/* Заголовок дропзоны + основное действие — на одной оси с Hero */}
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
