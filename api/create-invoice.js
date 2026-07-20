@@ -1,6 +1,11 @@
 // api/create-invoice.js
 // Создаёт инвойс в NOWPayments и возвращает ссылку на оплату
 
+// Домен берём из окружения (единая точка правды — см. lib/site-config.ts),
+// а не из заголовка запроса, чтобы IPN-колбэк всегда уходил на актуальный
+// домен, даже если пользователь зашёл через старый алиас/редирект.
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://convertcontext.vercel.app').replace(/\/+$/, '');
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -36,9 +41,9 @@ export default async function handler(req, res) {
         pay_currency: 'usdttrc20',
         order_id: `${token}:${plan}`, // сюда зашиваем токен и тариф, вебхук потом это прочитает
         order_description: plan === 'day' ? 'Снятие лимита на день' : 'Подписка на месяц',
-        ipn_callback_url: `https://${req.headers.host}/api/webhook`,
-        success_url: `https://${req.headers.host}/?paid=1`,
-        cancel_url: `https://${req.headers.host}/?paid=0`
+        ipn_callback_url: `${SITE_URL}/api/webhook`,
+        success_url: `${SITE_URL}/?paid=1`,
+        cancel_url: `${SITE_URL}/?paid=0`
       })
     });
 
